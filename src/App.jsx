@@ -12,7 +12,6 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Tickets from './pages/Tickets';
 import Contacts from './pages/Contacts';
-import Organizer from './pages/Organizer';
 import Admin from './pages/Admin';
 
 import './App.css';
@@ -32,7 +31,6 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/contacts" element={<Contacts />} />
-          <Route path="/organizer" element={<Organizer />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/ticket/:code" element={<TicketDetails />} />
         </Routes>

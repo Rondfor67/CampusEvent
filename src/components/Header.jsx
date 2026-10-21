@@ -7,7 +7,6 @@ function Header() {
   <button className="mobile-toggle" aria-label="Открыть меню" aria-expanded={open} onClick={() => setOpen(!open)}>☰</button>
   <nav className={`nav-links ${open ? 'expanded' : ''}`} onClick={() => setOpen(false)}>
    <NavLink to="/" end>Главная</NavLink><NavLink to="/events">Мероприятия</NavLink><NavLink to="/tickets">Мои билеты</NavLink><NavLink to="/contacts">Контакты</NavLink>
-   <NavLink to="/organizer">Организатор</NavLink>
   </nav><div className="nav-actions"><Link to="/login" className="btn btn-secondary">Войти</Link><Link to="/register" className="btn btn-primary">Регистрация ↗</Link></div>
  </div></header>;
 }
