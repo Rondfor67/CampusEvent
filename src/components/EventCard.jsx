@@ -1,35 +1,12 @@
-
 import { Link } from 'react-router-dom';
-
-function EventCard({ event }) {
-  const freeSeats = Math.max(
-    0,
-    event.capacity - event.registeredCount
-  );
-
-  const formattedDate = new Intl.DateTimeFormat('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(event.date));
-
-  return (
-    <article className="event-card">
-      <p>{event.category}</p>
-
-      <h2>{event.title}</h2>
-
-      <p>{formattedDate}</p>
-      <p>{event.location}</p>
-      <p>Свободных мест: {freeSeats}</p>
-
-      <Link to={`/events/${event.id}`}>
-        Подробнее
-      </Link>
-    </article>
-  );
+export default function EventCard({ event }) {
+ const seats = Math.max(0, Number(event.capacity) - Number(event.registeredCount));
+ const date = new Date(event.date);
+ const validDate = !Number.isNaN(date.getTime());
+ return <article className="event-card">
+  <div className="event-image"><div className="event-art">✦</div><span className="category-pill">{event.category || 'Мероприятие'}</span></div>
+  <div className="event-body"><div className="date-badge"><strong>{validDate ? date.getDate() : '—'}</strong><span>{validDate ? date.toLocaleDateString('ru-RU',{month:'short'}) : 'Дата'}</span></div>
+   <div className="event-info"><h3>{event.title}</h3><p>📍 {event.location || 'Место уточняется'}</p>
+    <p className="status">{seats > 0 ? `Осталось мест: ${seats}` : 'Мест нет'}</p><Link to={`/events/${event.id}`} className="text-link">Подробнее →</Link></div>
+  </div></article>;
 }
-
-export default EventCard;

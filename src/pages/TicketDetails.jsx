@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { getRegistrations, getEvent } from "../services/api";
 
 function TicketDetails() {
   const { code } = useParams();
@@ -11,15 +12,7 @@ function TicketDetails() {
   useEffect(() => {
     async function loadTicket() {
       try {
-        const response = await fetch(
-          "http://localhost:3000/api/registrations"
-        );
-
-        if (!response.ok) {
-          throw new Error("Не удалось проверить билет.");
-        }
-
-        const registrations = await response.json();
+        const registrations = await getRegistrations();
         const found = registrations.find(
           (item) => item.ticketCode === code
         );
@@ -29,13 +22,7 @@ function TicketDetails() {
           return;
         }
 
-        const eventResponse = await fetch(
-          `http://localhost:3000/api/events/${found.eventId}`
-        );
-
-        const event = eventResponse.ok
-          ? await eventResponse.json()
-          : null;
+        const event = await getEvent(found.eventId).catch(() => null);
 
         setTicket({
           ...found,

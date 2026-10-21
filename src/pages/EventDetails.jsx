@@ -1,9 +1,9 @@
 
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getEvents } from "../services/api";
+import { getEvent, registerForEvent } from "../services/api";
 
-const API_URL = "http://localhost:3000/api";
+
 
 function EventDetails() {
   const { id } = useParams();
@@ -19,8 +19,7 @@ function EventDetails() {
   useEffect(() => {
     async function loadEvent() {
       try {
-        const events = await getEvents();
-        const found = events.find((item) => item.id === Number(id));
+        const found = await getEvent(id);
 
         if (!found) {
           setError("Мероприятие не найдено.");
@@ -44,23 +43,7 @@ function EventDetails() {
     setSubmitting(true);
 
     try {
-      const response = await fetch(`${API_URL}/registrations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          eventId: Number(id),
-          studentName,
-          email,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Не удалось записаться.");
-      }
+      await registerForEvent({ eventId: Number(id), studentName, email });
 
       setSuccess(
         "Ты успешно записалась! Теперь открой раздел «Мои билеты», чтобы увидеть свой QR-код."

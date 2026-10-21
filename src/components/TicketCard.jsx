@@ -32,10 +32,10 @@ function TicketCard({ ticket }) {
 
       <div className="ticket-qr">
         <QRCodeSVG
-          value={ticket.ticketCode}
-          size={180}
-          level="M"
-          includeMargin
+        value={ticket.ticketCode}
+        size={180}
+        level="M"
+        includeMargin
         />
         <p>Покажите QR-код организатору на входе</p>
       </div>

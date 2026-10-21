@@ -1,8 +1,9 @@
 
 import { useEffect, useState } from "react";
 import TicketCard from "../components/TicketCard";
+import { getRegistrations, getEvent } from "../services/api";
 
-const API_URL = "http://localhost:3000/api";
+
 
 function Tickets() {
   const [tickets, setTickets] = useState([]);
@@ -12,34 +13,13 @@ function Tickets() {
   useEffect(() => {
     async function loadTickets() {
       try {
-        const response = await fetch(`${API_URL}/registrations`);
-
-        if (!response.ok) {
-          throw new Error("Не удалось загрузить билеты");
-        }
-
-        const registrations = await response.json();
+        const registrations = await getRegistrations();
 
         const result = await Promise.all(
           registrations.map(async (ticket) => {
             try {
-              const eventResponse = await fetch(
-                `${API_URL}/events/${ticket.eventId}`
-              );
-
-              if (!eventResponse.ok) {
-                return {
-                  ...ticket,
-                  eventTitle: `Мероприятие №${ticket.eventId}`,
-                };
-              }
-
-              const event = await eventResponse.json();
-
-              return {
-                ...ticket,
-                eventTitle: event.title,
-              };
+              const event = await getEvent(ticket.eventId);
+              return { ...ticket, eventTitle: event.title };
             } catch {
               return {
                 ...ticket,
