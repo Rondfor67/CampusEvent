@@ -1,6 +1,6 @@
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-
+import TicketDetails from "./pages/TicketDetails";
 import Header from './components/Header';
 import Footer from './components/Footer';
 
@@ -34,6 +34,7 @@ function App() {
           <Route path="/contacts" element={<Contacts />} />
           <Route path="/organizer" element={<Organizer />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/ticket/:code" element={<TicketDetails />} />
         </Routes>
       </main>
 

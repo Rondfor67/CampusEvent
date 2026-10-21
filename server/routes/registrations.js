@@ -1,4 +1,4 @@
-
+import { randomUUID } from "node:crypto";
 import express from "express";
 import { events } from "./events.js";
 
@@ -7,12 +7,11 @@ const router = express.Router();
 const registrations = [];
 let nextId = 1;
 
-// Получить все регистрации
+
 router.get("/", (req, res) => {
   res.json(registrations);
 });
 
-// Получить регистрации конкретного мероприятия
 router.get("/event/:eventId", (req, res) => {
   const eventId = Number(req.params.eventId);
 
@@ -23,7 +22,7 @@ router.get("/event/:eventId", (req, res) => {
   res.json(eventRegistrations);
 });
 
-// Зарегистрироваться на мероприятие
+
 router.post("/", (req, res) => {
   const { eventId, studentName, email } = req.body;
 
@@ -72,12 +71,14 @@ router.post("/", (req, res) => {
   }
 
   const registration = {
-    id: nextId++,
-    eventId: event.id,
-    studentName: studentName.trim(),
-    email: normalizedEmail,
-    createdAt: new Date().toISOString()
-  };
+  id: nextId++,
+  eventId: event.id,
+  studentName: studentName.trim(),
+  email: normalizedEmail,
+  ticketCode: randomUUID(),
+  checkedIn: false,
+  createdAt: new Date().toISOString()
+};
 
   registrations.push(registration);
 
