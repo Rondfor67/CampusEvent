@@ -1,100 +1,201 @@
-import express from "express";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import pool from "../db.js";
+
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+import User from '../models/User.js';
+import AllowedStudent from '../models/AllowedStudent.js';
 
 const router = express.Router();
-const JWT_SECRET = "super_secret_campus_key";
 
-// 1. РЕГИСТРАЦИЯ
-router.post("/register", async (req, res) => {
+function isAllowedStudentIin(iin) {
+  if (!/^\d{12}$/.test(iin)) {
+    return false;
+  }
+
+  const year = Number(iin.slice(0, 2));
+  const month = Number(iin.slice(2, 4));
+  const day = Number(iin.slice(4, 6));
+  const centuryCode = Number(iin[6]);
+
+  // Для рождённых в 2000–2099 годах
+  if (centuryCode !== 5 && centuryCode !== 6) {
+    return false;
+  }
+
+  const fullYear = 2000 + year;
+
+  if (fullYear < 2008 || fullYear > 2011) {
+    return false;
+  }
+
+  const date = new Date(Date.UTC(fullYear, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === fullYear &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+function createToken(user) {
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET не настроен');
+  }
+
+  return jwt.sign(
+    { id: user._id.toString(), role: user.role },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}
+
+// РЕГИСТРАЦИЯ
+router.post('/register', async (req, res) => {
   try {
-    const { iin, full_name, email, password, role } = req.body;
+    const { iin, full_name, email, password } = req.body;
 
-    if (!iin || !full_name || !email || !password) {
-      return res.status(400).json({ message: "Заполните все обязательные поля" });
+    if (
+      typeof iin !== 'string' ||
+      typeof full_name !== 'string' ||
+      typeof email !== 'string' ||
+      typeof password !== 'string'
+    ) {
+      return res.status(400).json({
+        message: 'Заполните все поля',
+      });
     }
 
-    // Проверяем, есть ли уже пользователь с таким email или iin
-    const existingUser = await pool.query(
-      "SELECT * FROM users WHERE email = $1 OR iin = $2",
-      [email, iin]
-    );
+    const cleanIin = iin.trim();
+    const cleanName = full_name.trim();
+    const cleanEmail = email.trim().toLowerCase();
 
-    if (existingUser.rows.length > 0) {
-      return res.status(409).json({ message: "Пользователь с таким email или ИИН уже существует" });
+    if (
+      !isAllowedStudentIin(cleanIin) ||
+      !cleanName ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) ||
+      password.length < 8
+    ) {
+      return res.status(400).json({
+        message: 'Проверьте ИИН, ФИО, email и пароль (минимум 8 символов)',
+      });
     }
 
-    // Хэшируем пароль
-    const passwordHash = await bcrypt.hash(password, 10);
+    // Проверяем ИИН по разрешённому списку
+    const student = await AllowedStudent.findOne({ iin: cleanIin });
 
-    // ВАЖНО: Если в таблице users из init.sql нет колонки password_hash, 
-    // её нужно добавить один раз через SQL: ALTER TABLE users ADD COLUMN password_hash VARCHAR(255);
-    const newUser = await pool.query(
-      `INSERT INTO users (iin, full_name, email, password_hash, role) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, iin, full_name, email, role`,
-      [iin, full_name, email, passwordHash, role || "student"]
-    );
+    if (!student) {
+      return res.status(403).json({
+        message: 'Ваш ИИН отсутствует в списке студентов',
+      });
+    }
 
-    res.status(201).json({
-      message: "Регистрация прошла успешно",
-      user: newUser.rows[0]
+    // Проверяем совпадение ФИО
+    if (
+      student.full_name.trim().toLowerCase() !==
+      cleanName.toLowerCase()
+    ) {
+      return res.status(400).json({
+        message: 'ФИО не соответствует данным студента',
+      });
+    }
+
+    const existingUser = await User.findOne({
+      $or: [{ iin: cleanIin }, { email: cleanEmail }],
     });
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Ошибка сервера при регистрации", error: err.message });
+    if (existingUser) {
+      return res.status(409).json({
+        message: 'Пользователь с таким ИИН или email уже зарегистрирован',
+      });
+    }
+
+    const password_hash = await bcrypt.hash(password, 12);
+
+    const user = await User.create({
+      iin: cleanIin,
+      full_name: student.full_name,
+      email: cleanEmail,
+      password_hash,
+      role: 'user',
+    });
+
+    return res.status(201).json({
+      message: 'Регистрация успешна',
+      token: createToken(user),
+      user: {
+        id: user._id,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: 'Пользователь уже зарегистрирован',
+      });
+    }
+
+    console.error('Ошибка регистрации:', error.message);
+
+    return res.status(500).json({
+      message: 'Ошибка сервера',
+    });
   }
 });
 
-// 2. АВТОРИЗАЦИЯ (ВХОД)
-router.post("/login", async (req, res) => {
+// ВХОД
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Введите email и пароль" });
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({
+        message: 'Введите email и пароль',
+      });
     }
 
-    const userResult = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+    }).select('+password_hash');
 
-    if (userResult.rows.length === 0) {
-      return res.status(401).json({ message: "Неверный email или пароль" });
+    if (!user) {
+      return res.status(401).json({
+        message: 'Неверный email или пароль',
+      });
     }
 
-    const user = userResult.rows[0];
-
-    // Проверяем, задан ли пароль у пользователя в базе (так как в init.sql тестовые юзеры без паролей)
-    if (!user.password_hash) {
-      return res.status(401).json({ message: "Для этого аккаунта еще не задан пароль. Обратитесь к администратору." });
-    }
-
-    const isValid = await bcrypt.compare(password, user.password_hash);
-
-    if (!isValid) {
-      return res.status(401).json({ message: "Неверный email или пароль" });
-    }
-
-    const token = jwt.sign(
-      { userId: user.id, role: user.role, email: user.email },
-      JWT_SECRET,
-      { expiresIn: "24h" }
+    const validPassword = await bcrypt.compare(
+      password,
+      user.password_hash
     );
 
-    res.json({
-      message: "Успешный вход",
-      token,
+    if (!validPassword) {
+      return res.status(401).json({
+        message: 'Неверный email или пароль',
+      });
+    }
+
+    return res.json({
+      message: 'Вход выполнен',
+      token: createToken(user),
       user: {
-        id: user.id,
+        id: user._id,
         full_name: user.full_name,
         email: user.email,
-        role: user.role
-      }
+        role: user.role,
+      },
     });
+  } catch (error) {
+    console.error('Ошибка входа:', error.message);
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Ошибка сервера при входе", error: err.message });
+    return res.status(500).json({
+      message: 'Ошибка сервера',
+    });
   }
 });
 
