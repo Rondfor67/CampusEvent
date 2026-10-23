@@ -1,0 +1,2 @@
+import { Link } from 'react-router-dom';
+export default function Footer(){return <footer className="footer"><div className="footer-inner"><div><strong>✦ CampusEvents</strong><p>Твоя студенческая жизнь начинается здесь.</p></div><div><Link to="/events">Мероприятия</Link><Link to="/tickets">Мои билеты</Link><Link to="/contacts">Контакты</Link></div><span>© {new Date().getFullYear()} CampusEvents</span></div></footer>}
