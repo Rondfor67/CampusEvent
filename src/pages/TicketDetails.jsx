@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+
 function TicketDetails() {
   const { code } = useParams();
 
@@ -23,7 +25,7 @@ function TicketDetails() {
         }
 
         const response = await fetch(
-          `/api/registrations/ticket/${encodeURIComponent(code)}`,
+          `${API_URL}/registrations/ticket/${encodeURIComponent(code)}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
