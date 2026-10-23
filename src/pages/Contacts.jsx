@@ -1,4 +1,6 @@
+
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const contactItems = [
   {
@@ -21,15 +23,20 @@ const contactItems = [
   },
 ];
 
-function Contacts() {
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-  });
+const emptyForm = {
+  name: '',
+  email: '',
+  subject: '',
+  message: '',
+};
 
+function Contacts() {
+  const token = localStorage.getItem('token');
+  const isLoggedIn = Boolean(token);
+  const [form, setForm] = useState(emptyForm);
   const [notice, setNotice] = useState('');
+  const [isError, setIsError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -40,15 +47,56 @@ function Contacts() {
     }));
 
     setNotice('');
+    setIsError(false);
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    // Пока серверная отправка сообщений не подключена.
-    setNotice(
-      'Форма заполнена! Отправка сообщений пока не подключена к серверу.',
-    );
+    if (submitting) return;
+
+    setSubmitting(true);
+    setNotice('');
+    setIsError(false);
+
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token
+            ? { Authorization: `Bearer ${token}` }
+            : {}),
+        },
+        body: JSON.stringify({
+          full_name: form.name.trim(),
+          email: form.email.trim(),
+          subject: form.subject.trim(),
+          message: form.message.trim(),
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || 'Не удалось отправить сообщение'
+        );
+      }
+
+      setNotice(
+        'Сообщение успешно отправлено! Администратор получил твоё обращение.'
+      );
+
+      setForm({ ...emptyForm });
+    } catch (error) {
+      setIsError(true);
+      setNotice(error.message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -104,14 +152,22 @@ function Contacts() {
 
           <div className="contacts-info-grid">
             {contactItems.map((item) => (
-              <article className="contacts-info-card" key={item.title}>
-                <div className="contacts-info-icon" aria-hidden="true">
+              <article
+                className="contacts-info-card"
+                key={item.title}
+              >
+                <div
+                  className="contacts-info-icon"
+                  aria-hidden="true"
+                >
                   {item.icon}
                 </div>
 
                 <div className="contacts-info-content">
                   <h3>{item.title}</h3>
-                  <p className="contacts-info-value">{item.value}</p>
+                  <p className="contacts-info-value">
+                    {item.value}
+                  </p>
                   <p className="contacts-info-description">
                     {item.description}
                   </p>
@@ -122,13 +178,18 @@ function Contacts() {
         </div>
       </section>
 
-      <section className="contacts-form-section" id="contact-form">
+      <section
+        className="contacts-form-section"
+        id="contact-form"
+      >
         <div className="contacts-container contacts-form-layout">
           <div className="contacts-form-card">
             <span className="eyebrow">ОБРАТНАЯ СВЯЗЬ</span>
             <h2>Напиши нам</h2>
+
             <p className="contacts-form-intro">
-              Заполни форму, и мы сможем разобраться в твоём вопросе.
+              Заполни форму, и мы сможем разобраться
+              в твоём вопросе.
             </p>
 
             <form onSubmit={handleSubmit}>
@@ -141,6 +202,7 @@ function Contacts() {
                     placeholder="Как тебя зовут?"
                     value={form.name}
                     onChange={handleChange}
+                    maxLength={100}
                     required
                   />
                 </label>
@@ -153,6 +215,7 @@ function Contacts() {
                     placeholder="example@email.com"
                     value={form.email}
                     onChange={handleChange}
+                    maxLength={254}
                     required
                   />
                 </label>
@@ -166,6 +229,7 @@ function Contacts() {
                   placeholder="О чём хочешь спросить?"
                   value={form.subject}
                   onChange={handleChange}
+                  maxLength={200}
                   required
                 />
               </label>
@@ -178,16 +242,28 @@ function Contacts() {
                   rows={5}
                   value={form.message}
                   onChange={handleChange}
+                  maxLength={5000}
                   required
                 />
               </label>
 
-              <button type="submit" className="btn btn-primary contacts-submit">
-                Отправить сообщение <span aria-hidden="true">↗</span>
+              <button
+                type="submit"
+                className="btn btn-primary contacts-submit"
+                disabled={submitting}
+              >
+                {submitting
+                  ? 'Отправляем...'
+                  : 'Отправить сообщение'}
+                {' '}
+                <span aria-hidden="true">↗</span>
               </button>
 
               {notice && (
-                <p className="contacts-notice" role="status">
+                <p
+                  className="contacts-notice"
+                  role={isError ? 'alert' : 'status'}
+                >
                   {notice}
                 </p>
               )}
@@ -195,35 +271,60 @@ function Contacts() {
           </div>
 
           <aside className="contacts-side-card">
-            <span className="contacts-side-label">CAMPUS EVENTS</span>
+            <span className="contacts-side-label">
+              CAMPUS EVENTS
+            </span>
 
-            <h2>Твоя идея может стать следующим большим событием.</h2>
+            <h2>
+              Твоя идея может стать следующим
+              большим событием.
+            </h2>
 
             <p>
-              Хочешь организовать мастер-класс, встречу или фестиваль?
-              Предложи мероприятие через свой аккаунт. После одобрения
-              администратора оно появится в общем каталоге.
+              Хочешь организовать мастер-класс,
+              встречу или фестиваль?
+              Предложи мероприятие через свой аккаунт.
+              После одобрения администратора
+              оно появится в общем каталоге.
             </p>
 
             <div className="contacts-side-divider" />
 
+            
             <div className="contacts-side-tip">
-              <span className="contacts-tip-icon" aria-hidden="true">
+              <span
+                className="contacts-tip-icon"
+                aria-hidden="true"
+              >
                 ✦
               </span>
+
               <div>
                 <strong>Есть идея?</strong>
                 <p>
-                  Войди в аккаунт, чтобы предложить своё мероприятие.
+                  {isLoggedIn
+                    ? 'Предложи своё мероприятие. После проверки администратором оно появится в каталоге.'
+                    : 'Войди в аккаунт, чтобы предложить своё мероприятие.'}
                 </p>
               </div>
             </div>
 
-            <a href="/login" className="contacts-side-link">
-              Войти в аккаунт <span aria-hidden="true">→</span>
-            </a>
+            <Link
+              to={isLoggedIn ? '/events/create' : '/login'}
+              className="contacts-side-link"
+            >
+              {isLoggedIn
+                ? 'Предложить мероприятие'
+                : 'Войти в аккаунт'}
+              {' '}
+              <span aria-hidden="true">→</span>
+            </Link>
 
-            <span className="contacts-side-decoration" aria-hidden="true">
+
+            <span
+              className="contacts-side-decoration"
+              aria-hidden="true"
+            >
               ✳
             </span>
           </aside>

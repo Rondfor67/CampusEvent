@@ -1,69 +1,127 @@
 
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { getRegistrations, getEvent } from "../services/api";
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
 
 function TicketDetails() {
   const { code } = useParams();
+
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadTicket() {
       try {
-        const registrations = await getRegistrations();
-        const found = registrations.find(
-          (item) => item.ticketCode === code
-        );
+        const token = localStorage.getItem('token');
 
-        if (!found) {
-          setError("Билет не найден или недействителен.");
-          return;
+        if (!token) {
+          throw new Error(
+            'Войди под администратором, чтобы проверить билет.'
+          );
         }
 
-        const event = await getEvent(found.eventId).catch(() => null);
+        const response = await fetch(
+          `/api/registrations/ticket/${encodeURIComponent(code)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-        setTicket({
-          ...found,
-          eventTitle: event?.title || `Мероприятие №${found.eventId}`,
-        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || 'Не удалось проверить билет'
+          );
+        }
+
+        if (!cancelled) {
+          setTicket(data);
+        }
       } catch (err) {
-        setError(err.message || "Ошибка проверки билета.");
+        if (!cancelled) {
+          setError(err.message);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadTicket();
+
+    return () => {
+      cancelled = true;
+    };
   }, [code]);
-
-  if (loading) return <main><p>Проверяем билет...</p></main>;
-
-  if (error) {
-    return (
-      <main className="tickets-page">
-        <h1>Билет не подтверждён</h1>
-        <p>{error}</p>
-        <Link to="/">На главную</Link>
-      </main>
-    );
-  }
 
   return (
     <main className="tickets-page">
-      <h1>Информация о билете</h1>
-      <p><strong>Участник:</strong> {ticket.studentName}</p>
-      <p><strong>Email:</strong> {ticket.email}</p>
-      <p><strong>Мероприятие:</strong> {ticket.eventTitle}</p>
-      <p>
-        <strong>Дата регистрации:</strong>{" "}
-        {new Date(ticket.createdAt).toLocaleString("ru-RU")}
-      </p>
-      <p>
-        <strong>Статус:</strong>{" "}
-        {ticket.checkedIn ? "Посещение подтверждено" : "Билет действителен"}
-      </p>
+      <h1>Проверка электронного билета</h1>
+
+      {loading && <p>Проверяем билет в базе данных...</p>}
+
+      {error && (
+        <div>
+          <p role="alert">{error}</p>
+          <Link to="/login" className="text-link">
+            Войти →
+          </Link>
+        </div>
+      )}
+
+      {!loading && ticket && (
+        <article className="ticket-card">
+          <div className="ticket-card-info">
+            <span className="event-category">
+              CAMPUS EVENTS / QR-БИЛЕТ
+            </span>
+
+            <h2>{ticket.eventTitle}</h2>
+
+            <p>
+              <strong>Участник:</strong> {ticket.studentName}
+            </p>
+
+            <p>
+              <strong>Email:</strong> {ticket.email}
+            </p>
+
+            <p>
+              <strong>Место:</strong> {ticket.location}
+            </p>
+
+            <p>
+              <strong>Дата мероприятия:</strong>{' '}
+              {ticket.eventDate
+                ? new Date(ticket.eventDate).toLocaleString('ru-RU')
+                : 'Не указана'}
+            </p>
+
+            <p>
+              <strong>Дата регистрации:</strong>{' '}
+              {new Date(ticket.registeredAt).toLocaleString('ru-RU')}
+            </p>
+
+            <p>
+              <strong>Статус:</strong>{' '}
+              {ticket.valid
+                ? '✅ Билет действителен'
+                : '❌ Билет недействителен'}
+            </p>
+
+            <p>
+              <strong>Код билета:</strong>{' '}
+              <code>{ticket.ticketCode}</code>
+            </p>
+          </div>
+        </article>
+      )}
     </main>
   );
 }

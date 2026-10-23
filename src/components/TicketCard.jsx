@@ -1,42 +1,60 @@
 
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeSVG } from 'qrcode.react';
 
 function TicketCard({ ticket }) {
+  const ticketUrl = `${window.location.origin}/tickets/${encodeURIComponent(
+    ticket.ticketCode
+  )}`;
+
   return (
     <article className="ticket-card">
       <div className="ticket-card-info">
-        <span className="event-category">ЭЛЕКТРОННЫЙ БИЛЕТ</span>
+        <span className="event-category">
+          ЭЛЕКТРОННЫЙ БИЛЕТ
+        </span>
 
-        <h2>{ticket.eventTitle || `Мероприятие №${ticket.eventId}`}</h2>
+        <h2>{ticket.eventTitle}</h2>
 
         <p>
-          <strong>Участник:</strong> {ticket.studentName}
+          <strong>Участник:</strong>{' '}
+          {ticket.studentName || 'Не указан'}
         </p>
 
         <p>
-          <strong>Email:</strong> {ticket.email}
+          <strong>Email:</strong>{' '}
+          {ticket.email || 'Не указан'}
         </p>
 
         <p>
-          <strong>Дата регистрации:</strong>{" "}
-          {ticket.createdAt
-            ? new Date(ticket.createdAt).toLocaleDateString("ru-RU")
-            : "Не указана"}
+          <strong>Дата мероприятия:</strong>{' '}
+          {ticket.date
+            ? new Date(ticket.date).toLocaleString('ru-RU')
+            : 'Не указана'}
         </p>
 
         <p>
-          <strong>Статус:</strong>{" "}
-          {ticket.checkedIn ? "Посещение подтверждено" : "Действителен"}
+          <strong>Место:</strong>{' '}
+          {ticket.location || 'Не указано'}
+        </p>
+
+        <p>
+          <strong>Статус:</strong>{' '}
+          {ticket.status === 'used'
+            ? 'Посещение подтверждено'
+            : ticket.status === 'cancelled'
+              ? 'Аннулирован'
+              : 'Действителен'}
         </p>
       </div>
 
       <div className="ticket-qr">
         <QRCodeSVG
-        value={ticket.ticketCode}
-        size={180}
-        level="M"
-        includeMargin
+          value={ticketUrl}
+          size={180}
+          level="M"
+          includeMargin
         />
+
         <p>Покажите QR-код организатору на входе</p>
       </div>
     </article>

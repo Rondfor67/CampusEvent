@@ -1,27 +1,99 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+const TIME_ZONE = 'Asia/Almaty';
+
+function formatDate(date) {
+  if (!date) return 'Не указана';
+
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return 'Не указана';
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: TIME_ZONE,
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(parsed);
+}
+
+function formatTime(date) {
+  if (!date) return 'Не указано';
+
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return 'Не указано';
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(parsed);
+}
+
+function formatDateTime(date) {
+  if (!date) return 'Не указана';
+
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return 'Не указана';
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: TIME_ZONE,
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(parsed);
+}
+
+function venueName(venue) {
+  if (!venue || typeof venue !== 'object') {
+    return 'Не указано';
+  }
+
+  return (
+    [venue.name, venue.building]
+      .filter(Boolean)
+      .join(', ') || 'Не указано'
+  );
+}
+
+function Detail({ label, children }) {
+  return (
+    <div className="admin-detail">
+      <span>{label}</span>
+      <div>{children ?? 'Не указано'}</div>
+    </div>
+  );
+}
+
 function Admin() {
   const [activeTab, setActiveTab] = useState('events');
+
   const [events, setEvents] = useState([]);
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
+
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
+
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const token = localStorage.getItem('token');
-
   const request = useCallback(async (path, options = {}) => {
+    const token = localStorage.getItem('token');
+
     const response = await fetch(path, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
+        ...(token
+          ? { Authorization: `Bearer ${token}` }
+          : {}),
+        ...(options.headers || {}),
       },
     });
 
@@ -29,12 +101,14 @@ function Admin() {
 
     if (!response.ok) {
       throw new Error(
-        data.message || data.error || `Ошибка сервера: ${response.status}`
+        data.message ||
+          data.error ||
+          `Ошибка сервера: ${response.status}`
       );
     }
 
     return data;
-  }, [token]);
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -42,14 +116,23 @@ function Admin() {
 
     try {
       if (activeTab === 'events') {
-        const data = await request('/api/events?status=pending');
-        setEvents(Array.isArray(data) ? data : data.events || []);
+        const data = await request(
+          '/api/applications?status=pending'
+        );
+
+        setEvents(Array.isArray(data) ? data : []);
       } else if (activeTab === 'messages') {
         const data = await request('/api/contacts');
-        setMessages(Array.isArray(data) ? data : data.messages || []);
+
+        setMessages(
+          Array.isArray(data) ? data : data.messages || []
+        );
       } else if (activeTab === 'users') {
         const data = await request('/api/users');
-        setUsers(Array.isArray(data) ? data : data.users || []);
+
+        setUsers(
+          Array.isArray(data) ? data : data.users || []
+        );
       }
     } catch (err) {
       setError(err.message);
@@ -63,80 +146,121 @@ function Admin() {
   }, [loadData]);
 
   async function updateEvent(status) {
-    if (!selectedEvent) return;
+    if (!selectedEvent || submitting) return;
+
+    if (status === 'rejected' && !rejectionReason.trim()) {
+      setError('Укажи причину отклонения');
+      return;
+    }
 
     setError('');
     setNotice('');
+    setSubmitting(true);
 
     try {
-      await request(`/api/events/${selectedEvent.id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          status,
-          rejectionReason: status === 'rejected' ? rejectionReason.trim() : '',
-        }),
-      });
+      await request(
+        `/api/applications/${selectedEvent._id}/status`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            status,
+            rejectionReason:
+              status === 'rejected'
+                ? rejectionReason.trim()
+                : '',
+          }),
+        }
+      );
 
       setNotice(
         status === 'approved'
-          ? 'Мероприятие одобрено.'
+          ? 'Заявка одобрена. Мероприятие опубликовано.'
           : 'Заявка отклонена.'
       );
 
       setSelectedEvent(null);
       setShowRejectForm(false);
       setRejectionReason('');
+
       await loadData();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function markMessage(message) {
+    if (submitting) return;
+
     setError('');
     setNotice('');
+    setSubmitting(true);
 
     try {
-      await request(`/api/contacts/${message.id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'processed' }),
-      });
+      await request(
+        `/api/contacts/${message._id || message.id}/status`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            status: 'resolved',
+          }),
+        }
+      );
 
       setNotice('Сообщение отмечено как обработанное.');
       await loadData();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setSubmitting(false);
     }
   }
 
-  function value(...values) {
-    return values.find(
-      (item) => item !== undefined && item !== null && item !== ''
-    ) || '';
+  function openEvent(event) {
+    setSelectedEvent(event);
+    setShowRejectForm(false);
+    setRejectionReason('');
+    setError('');
+    setNotice('');
   }
 
-  function Detail({ label, children }) {
-    return (
-      <div className="admin-detail">
-        <span>{label}</span>
-        <div>{children || 'Не указано'}</div>
-      </div>
-    );
+  function backToList() {
+    setSelectedEvent(null);
+    setShowRejectForm(false);
+    setRejectionReason('');
+    setError('');
+  }
+
+  function changeTab(tab) {
+    setActiveTab(tab);
+    setSelectedEvent(null);
+    setShowRejectForm(false);
+    setRejectionReason('');
+    setError('');
+    setNotice('');
   }
 
   return (
     <section className="admin-page">
       <div className="admin-heading">
         <div>
-          <p className="admin-eyebrow">GO CAMPUS / УПРАВЛЕНИЕ</p>
+          <p className="admin-eyebrow">
+            GO CAMPUS / УПРАВЛЕНИЕ
+          </p>
+
           <h1>Панель администратора</h1>
-          <p>Проверяй заявки и управляй мероприятиями.</p>
+
+          <p>
+            Проверяй заявки, обращения и управляй
+            мероприятиями.
+          </p>
         </div>
 
         <button
           className="admin-refresh"
           onClick={loadData}
-          disabled={loading}
+          disabled={loading || submitting}
         >
           {loading ? 'Загрузка...' : '↻ Обновить'}
         </button>
@@ -145,42 +269,45 @@ function Admin() {
       <div className="admin-tabs">
         <button
           className={activeTab === 'events' ? 'active' : ''}
-          onClick={() => {
-            setActiveTab('events');
-            setSelectedEvent(null);
-          }}
+          onClick={() => changeTab('events')}
         >
           Мероприятия
         </button>
 
         <button
           className={activeTab === 'messages' ? 'active' : ''}
-          onClick={() => {
-            setActiveTab('messages');
-            setSelectedEvent(null);
-          }}
+          onClick={() => changeTab('messages')}
         >
           Сообщения
         </button>
 
         <button
           className={activeTab === 'users' ? 'active' : ''}
-          onClick={() => {
-            setActiveTab('users');
-            setSelectedEvent(null);
-          }}
+          onClick={() => changeTab('users')}
         >
           Пользователи
         </button>
       </div>
 
-      {notice && <p className="admin-notice" role="status">{notice}</p>}
-      {error && <p className="admin-error" role="alert">{error}</p>}
+      {notice && (
+        <p className="admin-notice" role="status">
+          {notice}
+        </p>
+      )}
+
+      {error && (
+        <p className="admin-error" role="alert">
+          {error}
+        </p>
+      )}
 
       {loading ? (
-        <div className="admin-empty">Загружаем данные...</div>
+        <div className="admin-empty">
+          Загружаем данные...
+        </div>
       ) : (
         <>
+          {/* МЕРОПРИЯТИЯ */}
           {activeTab === 'events' && (
             <>
               {!selectedEvent ? (
@@ -194,31 +321,46 @@ function Admin() {
                     <div className="admin-empty">
                       <h3>Заявок пока нет</h3>
                       <p>
-                        Когда пользователи отправят мероприятия на проверку,
+                        Когда пользователи отправят
+                        мероприятия на проверку,
                         они появятся здесь.
                       </p>
                     </div>
                   ) : (
                     <div className="admin-list">
                       {events.map((event) => (
-                        <article className="admin-item" key={event.id}>
+                        <article
+                          className="admin-item"
+                          key={event._id}
+                        >
                           <div className="admin-item-info">
                             <span className="admin-status">
                               Ожидает проверки
                             </span>
+
                             <h3>{event.title}</h3>
+
                             <p>
-                              {event.description || 'Описание не указано.'}
+                              {event.description ||
+                                'Описание не указано.'}
                             </p>
+
                             <div className="admin-meta">
                               <span>
-                                Дата: {value(event.date, event.event_date) || 'Не указана'}
+                                Дата:{' '}
+                                {formatDate(event.startAt)}
                               </span>
+
                               <span>
-                                Место: {event.location || 'Не указано'}
+                                Место:{' '}
+                                {venueName(event.venue)}
                               </span>
+
                               <span>
-                                Время: {value(event.startTime, event.start_time) || 'Не указано'}
+                                Время:{' '}
+                                {formatTime(event.startAt)}
+                                {' — '}
+                                {formatTime(event.endAt)}
                               </span>
                             </div>
                           </div>
@@ -226,12 +368,7 @@ function Admin() {
                           <div className="admin-actions">
                             <button
                               className="admin-approve"
-                              onClick={() => {
-                                setSelectedEvent(event);
-                                setShowRejectForm(false);
-                                setRejectionReason('');
-                                setError('');
-                              }}
+                              onClick={() => openEvent(event)}
                             >
                               Подробнее
                             </button>
@@ -245,11 +382,8 @@ function Admin() {
                 <div className="admin-request-details">
                   <button
                     className="admin-back"
-                    onClick={() => {
-                      setSelectedEvent(null);
-                      setShowRejectForm(false);
-                      setError('');
-                    }}
+                    onClick={backToList}
+                    disabled={submitting}
                   >
                     ← Назад к заявкам
                   </button>
@@ -259,115 +393,148 @@ function Admin() {
                       <span className="admin-status">
                         Заявка на рассмотрении
                       </span>
+
                       <h2>{selectedEvent.title}</h2>
-                      <p>Проверь все сведения перед принятием решения.</p>
+
+                      <p>
+                        Проверь все сведения перед
+                        принятием решения.
+                      </p>
                     </div>
                   </div>
 
                   <section className="admin-detail-section">
                     <h3>Основная информация</h3>
+
                     <div className="admin-detail-grid">
                       <Detail label="Название">
                         {selectedEvent.title}
                       </Detail>
+
                       <Detail label="Категория">
                         {selectedEvent.category}
                       </Detail>
+
                       <Detail label="Описание">
                         {selectedEvent.description}
                       </Detail>
+
                       <Detail label="Количество участников">
-                        {value(selectedEvent.capacity, selectedEvent.seats)}
+                        {selectedEvent.capacity}
                       </Detail>
                     </div>
                   </section>
 
+                  {/* ФОТОГРАФИИ ИЗ ЗАЯВКИ */}
+                  <section className="admin-detail-section">
+                    <h3>Фотографии мероприятия</h3>
+
+                    {Array.isArray(selectedEvent.images) &&
+                    selectedEvent.images.length > 0 ? (
+                      <div className="admin-event-photos">
+                        {selectedEvent.images.map((image, index) => {
+                          const src =
+                            typeof image === 'string'
+                              ? image
+                              : image?.url || image?.secure_url;
+
+                          if (!src) return null;
+
+                          return (
+                            <a
+                              key={`${src}-${index}`}
+                              href={src}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="admin-event-photo"
+                              title="Открыть фотографию"
+                            >
+                              <img
+                                src={src}
+                                alt={`Фото мероприятия ${index + 1}`}
+                                loading="lazy"
+                              />
+                              <span>
+                                {index === 0
+                                  ? 'Обложка'
+                                  : `Фото ${index + 1}`}
+                              </span>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p>Фотографии не добавлены.</p>
+                    )}
+                  </section>
+
                   <section className="admin-detail-section">
                     <h3>Дата и место проведения</h3>
+
                     <div className="admin-detail-grid">
                       <Detail label="Дата">
-                        {value(selectedEvent.date, selectedEvent.event_date)}
+                        {formatDate(selectedEvent.startAt)}
                       </Detail>
+
                       <Detail label="Начало">
-                        {value(selectedEvent.startTime, selectedEvent.start_time)}
+                        {formatTime(selectedEvent.startAt)}
                       </Detail>
+
                       <Detail label="Окончание">
-                        {value(selectedEvent.endTime, selectedEvent.end_time)}
+                        {formatTime(selectedEvent.endAt)}
                       </Detail>
+
                       <Detail label="Место / аудитория">
-                        {value(selectedEvent.location, selectedEvent.venue)}
+                        {venueName(selectedEvent.venue)}
                       </Detail>
                     </div>
 
                     <p className="admin-schedule-note">
-                      Перед одобрением необходимо проверить, нет ли
-                      пересечения с другими мероприятиями в этом месте.
-                      Автоматическая проверка появится после подключения
-                      соответствующей логики на сервере.
+                      Перед публикацией сервер проверяет,
+                      не занято ли помещение другим
+                      опубликованным мероприятием
+                      в выбранное время.
                     </p>
                   </section>
 
                   <section className="admin-detail-section">
                     <h3>Автор и контакты</h3>
+
                     <div className="admin-detail-grid">
                       <Detail label="Имя автора">
-                        {value(
-                          selectedEvent.user?.firstName,
-                          selectedEvent.user?.first_name,
-                          selectedEvent.author?.name,
-                          selectedEvent.userName,
-                          selectedEvent.user_name,
-                          selectedEvent.organizerName,
-                          selectedEvent.organizer_name
-                        )}
+                        {selectedEvent.createdBy?.full_name ||
+                          'Не указано'}
                       </Detail>
+
                       <Detail label="Email">
-                        {value(
-                          selectedEvent.user?.email,
-                          selectedEvent.author?.email,
-                          selectedEvent.userEmail,
-                          selectedEvent.user_email,
-                          selectedEvent.organizerEmail,
-                          selectedEvent.organizer_email
-                        )}
+                        {selectedEvent.createdBy?.email ||
+                          'Не указано'}
                       </Detail>
+
                       <Detail label="Телефон">
-                        {value(
-                          selectedEvent.phone,
-                          selectedEvent.contactPhone,
-                          selectedEvent.contact_phone,
-                          selectedEvent.organizerPhone,
-                          selectedEvent.organizer_phone
-                        )}
+                        {selectedEvent.phone ||
+                          'Не указано'}
                       </Detail>
                     </div>
                   </section>
 
                   <section className="admin-detail-section">
                     <h3>Организация мероприятия</h3>
+
                     <div className="admin-detail-grid">
                       <Detail label="Сообщение администрации">
-                        {value(
-                          selectedEvent.adminMessage,
-                          selectedEvent.admin_message,
-                          selectedEvent.organizerMessage,
-                          selectedEvent.organizer_message
-                        )}
-                      </Detail>
-                      <Detail label="Что требуется">
-                        {value(
-                          selectedEvent.requirements,
-                          selectedEvent.neededResources,
-                          selectedEvent.needed_resources
-                        )}
+                        {selectedEvent.comment ||
+                          'Сообщение не добавлено'}
                       </Detail>
                     </div>
                   </section>
 
                   <section className="admin-decision">
                     <h3>Решение администратора</h3>
+
                     <p>
-                      При отклонении укажи причину, чтобы автор понимал,
+                      При отклонении укажи причину,
+                      чтобы автор понимал,
                       что необходимо исправить.
                     </p>
 
@@ -375,13 +542,22 @@ function Admin() {
                       <div className="admin-decision-buttons">
                         <button
                           className="admin-approve"
-                          onClick={() => updateEvent('approved')}
+                          disabled={submitting}
+                          onClick={() =>
+                            updateEvent('approved')
+                          }
                         >
-                          Одобрить заявку
+                          {submitting
+                            ? 'Обработка...'
+                            : 'Одобрить заявку'}
                         </button>
+
                         <button
                           className="admin-reject"
-                          onClick={() => setShowRejectForm(true)}
+                          disabled={submitting}
+                          onClick={() =>
+                            setShowRejectForm(true)
+                          }
                         >
                           Отклонить заявку
                         </button>
@@ -391,23 +567,37 @@ function Admin() {
                         <label htmlFor="rejection-reason">
                           Причина отклонения
                         </label>
+
                         <textarea
                           id="rejection-reason"
                           value={rejectionReason}
-                          onChange={(e) => setRejectionReason(e.target.value)}
-                          placeholder="Например, аудитория уже занята в это время..."
+                          onChange={(e) =>
+                            setRejectionReason(e.target.value)
+                          }
+                          placeholder="Например, помещение занято в выбранное время..."
                           rows={4}
+                          disabled={submitting}
                         />
+
                         <div className="admin-decision-buttons">
                           <button
                             className="admin-reject"
-                            disabled={!rejectionReason.trim()}
-                            onClick={() => updateEvent('rejected')}
+                            disabled={
+                              !rejectionReason.trim() ||
+                              submitting
+                            }
+                            onClick={() =>
+                              updateEvent('rejected')
+                            }
                           >
-                            Подтвердить отклонение
+                            {submitting
+                              ? 'Обработка...'
+                              : 'Подтвердить отклонение'}
                           </button>
+
                           <button
                             className="admin-back"
+                            disabled={submitting}
                             onClick={() => {
                               setShowRejectForm(false);
                               setRejectionReason('');
@@ -424,6 +614,7 @@ function Admin() {
             </>
           )}
 
+          {/* СООБЩЕНИЯ */}
           {activeTab === 'messages' && (
             <>
               <div className="admin-section-heading">
@@ -433,33 +624,84 @@ function Admin() {
 
               {messages.length === 0 ? (
                 <div className="admin-empty">
-                  Сообщений пока нет или API ещё не подключён.
+                  <h3>Сообщений пока нет</h3>
+                  <p>
+                    Когда студенты отправят обращения
+                    через страницу «Контакты»,
+                    они появятся здесь.
+                  </p>
                 </div>
               ) : (
                 <div className="admin-list">
                   {messages.map((message) => (
-                    <article className="admin-item" key={message.id}>
+                    <article
+                      className="admin-item"
+                      key={message._id || message.id}
+                    >
                       <div className="admin-item-info">
                         <span className="admin-status">
-                          {message.status === 'processed'
+                          {message.status === 'resolved'
                             ? 'Обработано'
-                            : 'Новое сообщение'}
+                            : message.status === 'read'
+                              ? 'Прочитано'
+                              : 'Новое сообщение'}
                         </span>
-                        <h3>{message.subject || 'Без темы'}</h3>
-                        <p>{message.message || message.text}</p>
+
+                        <h3>
+                          {message.subject || 'Без темы'}
+                        </h3>
+
+                        <p>
+                          {message.message ||
+                            'Текст сообщения отсутствует'}
+                        </p>
+
                         <div className="admin-meta">
-                          <span>{message.name}</span>
-                          <span>{message.email}</span>
+                          <span>
+                            Отправитель:{' '}
+                            {message.full_name ||
+                              'Не указано'}
+                          </span>
+
+                          <span>
+                            Email: {message.email}
+                          </span>
+                          
+                          <span>
+                            Телефон:{' '}
+                            {message.user?.phone ? (
+                              <a href={`tel:${message.user.phone}`}>
+                                {message.user.phone}
+                              </a>
+                            ) : (
+                              'Не указан'
+                            )}
+                          </span>
+
+
+                          <span>
+                            Дата:{' '}
+                            {formatDateTime(
+                              message.createdAt
+                            )}
+                          </span>
                         </div>
                       </div>
 
-                      {message.status !== 'processed' && (
-                        <button
-                          className="admin-approve"
-                          onClick={() => markMessage(message)}
-                        >
-                          Обработано
-                        </button>
+                      {message.status !== 'resolved' && (
+                        <div className="admin-actions">
+                          <button
+                            className="admin-approve"
+                            disabled={submitting}
+                            onClick={() =>
+                              markMessage(message)
+                            }
+                          >
+                            {submitting
+                              ? 'Обработка...'
+                              : 'Отметить обработанным'}
+                          </button>
+                        </div>
                       )}
                     </article>
                   ))}
@@ -468,6 +710,7 @@ function Admin() {
             </>
           )}
 
+          {/* ПОЛЬЗОВАТЕЛИ */}
           {activeTab === 'users' && (
             <>
               <div className="admin-section-heading">
@@ -477,7 +720,7 @@ function Admin() {
 
               {users.length === 0 ? (
                 <div className="admin-empty">
-                  Список пуст или маршрут пользователей ещё не подключён.
+                  <h3>Пользователей пока нет</h3>
                 </div>
               ) : (
                 <div className="admin-users-table">
@@ -488,12 +731,26 @@ function Admin() {
                   </div>
 
                   {users.map((user) => (
-                    <div className="admin-user-row" key={user.id}>
+                    <div
+                      className="admin-user-row"
+                      key={user._id || user.id}
+                    >
                       <span>
-                        {value(user.firstName, user.first_name, user.name)}{' '}
-                        {value(user.lastName, user.last_name)}
+                        {user.full_name ||
+                          user.name ||
+                          [
+                            user.firstName ||
+                              user.first_name,
+                            user.lastName ||
+                              user.last_name,
+                          ]
+                            .filter(Boolean)
+                            .join(' ') ||
+                          'Не указано'}
                       </span>
+
                       <span>{user.email}</span>
+
                       <span>
                         {user.role === 'admin'
                           ? 'Администратор'

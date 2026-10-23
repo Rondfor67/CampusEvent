@@ -4,15 +4,21 @@ import { Link, useNavigate } from 'react-router-dom';
 
 function Login() {
   const navigate = useNavigate();
+
   const [form, setForm] = useState({
     email: '',
     password: '',
   });
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   function handleChange(event) {
-    setForm({ ...form, [event.target.name]: event.target.value });
+    setForm({
+      ...form,
+      [event.target.name]: event.target.value,
+    });
+
     setError('');
   }
 
@@ -30,7 +36,9 @@ function Login() {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           email: form.email.trim(),
           password: form.password,
@@ -40,19 +48,31 @@ function Login() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Не удалось войти. Проверь email и пароль.');
+        throw new Error(
+          data.message ||
+          data.error ||
+          'Не удалось войти. Проверь email и пароль.'
+        );
       }
 
-      // Названия полей ответа нужно сверить с backend.
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      if (!data.token || !data.user) {
+        throw new Error('Сервер вернул неполные данные авторизации.');
       }
 
-      if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
+      // Сохраняем токен и данные пользователя
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Сообщаем Header.jsx, что пользователь вошёл
+      window.dispatchEvent(new Event('auth-change'));
+
+      // Перенаправляем в зависимости от роли
+      if (data.user.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/profile', { replace: true });
       }
 
-      navigate(data.user?.role === 'admin' ? '/admin' : '/profile');
     } catch (err) {
       setError(
         err.message === 'Failed to fetch'
@@ -75,11 +95,16 @@ function Login() {
           <span className="auth-symbol">GC</span>
           <p className="auth-eyebrow">С возвращением!</p>
           <h1>Войти в аккаунт</h1>
-          <p>Продолжай открывать новые события вместе с Go Campus.</p>
+          <p>
+            Продолжай открывать новые события вместе с Go Campus.
+          </p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          <label htmlFor="login-email">Email</label>
+          <label htmlFor="login-email">
+            Email
+          </label>
+
           <input
             id="login-email"
             name="email"
@@ -91,7 +116,10 @@ function Login() {
             required
           />
 
-          <label htmlFor="login-password">Пароль</label>
+          <label htmlFor="login-password">
+            Пароль
+          </label>
+
           <input
             id="login-password"
             name="password"
@@ -103,7 +131,11 @@ function Login() {
             required
           />
 
-          {error && <p className="auth-error" role="alert">{error}</p>}
+          {error && (
+            <p className="auth-error" role="alert">
+              {error}
+            </p>
+          )}
 
           <button
             className="btn btn-primary auth-submit"
@@ -115,7 +147,10 @@ function Login() {
         </form>
 
         <p className="auth-switch">
-          Ещё нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+          Ещё нет аккаунта?{' '}
+          <Link to="/register">
+            Зарегистрироваться
+          </Link>
         </p>
 
         <p className="auth-note">
