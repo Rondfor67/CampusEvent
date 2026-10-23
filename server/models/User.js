@@ -1,11 +1,15 @@
+
 import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema(
   {
     iin: {
       type: String,
-      required: true,
+      required: function () {
+        return this.role !== 'admin';
+      },
       unique: true,
+      sparse: true,
       select: false,
     },
 
@@ -23,6 +27,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    phone: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
     password_hash: {
       type: String,
       required: true,
@@ -31,7 +41,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ['user', 'admin'],
+      enum: ['user', 'teacher', 'admin'],
       default: 'user',
     },
   },
@@ -41,4 +51,5 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model('User', userSchema);
+export default mongoose.models.User ||
+  mongoose.model('User', userSchema);

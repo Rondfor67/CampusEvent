@@ -5,10 +5,11 @@ import jwt from 'jsonwebtoken';
 
 import User from '../models/User.js';
 import AllowedStudent from '../models/AllowedStudent.js';
+import AllowedTeacher from '../models/AllowedTeacher.js';
 
 const router = express.Router();
 
-function isAllowedStudentIin(iin) {
+function isValidIin(iin) {
   if (!/^\d{12}$/.test(iin)) {
     return false;
   }
@@ -18,17 +19,15 @@ function isAllowedStudentIin(iin) {
   const day = Number(iin.slice(4, 6));
   const centuryCode = Number(iin[6]);
 
-  // Для рождённых в 2000–2099 годах
-  if (centuryCode !== 5 && centuryCode !== 6) {
+  if (![1, 2, 3, 4, 5, 6].includes(centuryCode)) {
     return false;
   }
 
-  const fullYear = 2000 + year;
+  const century =
+    centuryCode <= 2 ? 1800 :
+    centuryCode <= 4 ? 1900 : 2000;
 
-  if (fullYear < 2008 || fullYear > 2011) {
-    return false;
-  }
-
+  const fullYear = century + year;
   const date = new Date(Date.UTC(fullYear, month - 1, day));
 
   return (
@@ -38,17 +37,54 @@ function isAllowedStudentIin(iin) {
   );
 }
 
+function isAllowedStudentIin(iin) {
+  if (!isValidIin(iin)) {
+    return false;
+  }
 
-const JWT_SECRET = process.env.JWT_SECRET;
+  const year = Number(iin.slice(0, 2));
+  const centuryCode = Number(iin[6]);
+
+  return (
+    [5, 6].includes(centuryCode) &&
+    2000 + year >= 2008 &&
+    2000 + year <= 2011
+  );
+}
+
+function normalizePhone(phone) {
+  if (typeof phone !== 'string') return null;
+
+  const cleaned = phone.replace(/[\s()-]/g, '');
+
+  if (/^8\d{10}$/.test(cleaned)) {
+    return '+7' + cleaned.slice(1);
+  }
+
+  if (/^7\d{10}$/.test(cleaned)) {
+    return '+' + cleaned;
+  }
+
+  if (/^\+7\d{10}$/.test(cleaned)) {
+    return cleaned;
+  }
+
+  return null;
+}
 
 function createToken(user) {
-  if (!JWT_SECRET) {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
     throw new Error('JWT_SECRET не настроен');
   }
 
   return jwt.sign(
-    { id: user._id.toString(), role: user.role },
-    JWT_SECRET,
+    {
+      id: user._id.toString(),
+      role: user.role,
+    },
+    secret,
     { expiresIn: '24h' }
   );
 }
@@ -56,60 +92,92 @@ function createToken(user) {
 // РЕГИСТРАЦИЯ
 router.post('/register', async (req, res) => {
   try {
-    const { iin, full_name, email, password } = req.body;
+    const {
+      iin,
+      full_name,
+      email,
+      phone,
+      password,
+      role = 'user',
+    } = req.body || {};
 
     if (
       typeof iin !== 'string' ||
       typeof full_name !== 'string' ||
       typeof email !== 'string' ||
+      typeof phone !== 'string' ||
       typeof password !== 'string'
     ) {
       return res.status(400).json({
-        message: 'Заполните все поля',
+        message: 'Заполните все поля, включая номер телефона',
+      });
+    }
+
+    // Администратора через регистрацию создать нельзя
+    if (!['user', 'teacher'].includes(role)) {
+      return res.status(403).json({
+        message: 'Недопустимая роль пользователя',
       });
     }
 
     const cleanIin = iin.trim();
     const cleanName = full_name.trim();
     const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = normalizePhone(phone);
+
+    const validRoleIin =
+      role === 'teacher'
+        ? isValidIin(cleanIin)
+        : isAllowedStudentIin(cleanIin);
 
     if (
-      !isAllowedStudentIin(cleanIin) ||
+      !validRoleIin ||
       !cleanName ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) ||
+      !cleanPhone ||
       password.length < 8
     ) {
       return res.status(400).json({
-        message: 'Проверьте ИИН, ФИО, email и пароль (минимум 8 символов)',
+        message:
+          'Проверьте ИИН, ФИО, email, телефон и пароль (минимум 8 символов)',
       });
     }
 
-    // Проверяем ИИН по разрешённому списку
-    const student = await AllowedStudent.findOne({ iin: cleanIin });
+    // Проверяем разрешённый список по роли
+    const allowedPerson =
+      role === 'teacher'
+        ? await AllowedTeacher.findOne({ iin: cleanIin })
+        : await AllowedStudent.findOne({ iin: cleanIin });
 
-    if (!student) {
+    if (!allowedPerson) {
       return res.status(403).json({
-        message: 'Ваш ИИН отсутствует в списке студентов',
+        message:
+          role === 'teacher'
+            ? 'Ваш ИИН отсутствует в списке преподавателей'
+            : 'Ваш ИИН отсутствует в списке студентов',
       });
     }
 
-    // Проверяем совпадение ФИО
     if (
-      student.full_name.trim().toLowerCase() !==
+      allowedPerson.full_name.trim().toLowerCase() !==
       cleanName.toLowerCase()
     ) {
       return res.status(400).json({
-        message: 'ФИО не соответствует данным студента',
+        message: 'ФИО не соответствует данным разрешённого списка',
       });
     }
 
     const existingUser = await User.findOne({
-      $or: [{ iin: cleanIin }, { email: cleanEmail }],
+      $or: [
+        { iin: cleanIin },
+        { email: cleanEmail },
+      ],
     });
 
     if (existingUser) {
       return res.status(409).json({
-        message: 'Пользователь с таким ИИН или email уже зарегистрирован',
+        message:
+          'Пользователь с таким ИИН или email уже зарегистрирован',
       });
     }
 
@@ -117,10 +185,11 @@ router.post('/register', async (req, res) => {
 
     const user = await User.create({
       iin: cleanIin,
-      full_name: student.full_name,
+      full_name: allowedPerson.full_name,
       email: cleanEmail,
+      phone: cleanPhone,
       password_hash,
-      role: 'user',
+      role,
     });
 
     return res.status(201).json({
@@ -130,6 +199,7 @@ router.post('/register', async (req, res) => {
         id: user._id,
         full_name: user.full_name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       },
     });
@@ -151,9 +221,12 @@ router.post('/register', async (req, res) => {
 // ВХОД
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
 
-    if (typeof email !== 'string' || typeof password !== 'string') {
+    if (
+      typeof email !== 'string' ||
+      typeof password !== 'string'
+    ) {
       return res.status(400).json({
         message: 'Введите email и пароль',
       });
@@ -187,6 +260,7 @@ router.post('/login', async (req, res) => {
         id: user._id,
         full_name: user.full_name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       },
     });

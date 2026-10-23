@@ -1,76 +1,101 @@
-import express from "express";
-import pool from "../db.js"; // Подключение к базе данных
+
+import express from 'express';
+import mongoose from 'mongoose';
+
+import Event from '../models/Event.js';
 
 const router = express.Router();
 
-// 1. Получить все мероприятия
-router.get("/", async (req, res) => {
+// GET /api/events
+// Получить все опубликованные мероприятия
+router.get('/', async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM events ORDER BY event_date ASC");
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Ошибка сервера при получении мероприятий" });
-  }
-});
+    const events = await Event.find()
+      .populate('venue', 'name building capacity')
+      .sort({ startAt: 1 })
+      .lean();
 
-// 2. Получить одно мероприятие по ID
-router.get("/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query("SELECT * FROM events WHERE id = $1", [id]);
+    const result = events.map((event) => ({
+      ...event,
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Мероприятие не найдено" });
-    }
+      id: event._id.toString(),
+      date: event.startAt,
+      event_date: event.startAt,
 
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Ошибка сервера" });
-  }
-});
+      location: event.venue
+        ? `${event.venue.name}, ${event.venue.building}`
+        : 'Не указано',
 
-// 3. Добавить мероприятие
-router.post("/", async (req, res) => {
-  try {
-    const { title, description, event_date, organizer_id } = req.body;
+      availableSeats: Math.max(
+        0,
+        event.capacity - (event.registeredCount || 0)
+      ),
 
-    if (!title || !event_date) {
-      return res.status(400).json({ message: "Укажите название и дату мероприятия" });
-    }
+      // Фотографии из Cloudinary
+      images: Array.isArray(event.images)
+        ? event.images
+        : [],
+    }));
 
-    const newEvent = await pool.query(
-      `INSERT INTO events (title, description, event_date, organizer_id) 
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [title, description || "", event_date, organizer_id || null]
-    );
+    res.json(result);
+  } catch (error) {
+    console.error('Ошибка получения мероприятий:', error);
 
-    res.status(201).json({
-      message: "Мероприятие создано",
-      event: newEvent.rows[0]
+    res.status(500).json({
+      message: 'Не удалось загрузить мероприятия',
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Ошибка сервера при создании мероприятия", error: err.message });
   }
 });
 
-// 4. Удалить мероприятие
-router.delete("/:id", async (req, res) => {
+// GET /api/events/:id
+// Получить одно опубликованное мероприятие
+router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const deleted = await pool.query("DELETE FROM events WHERE id = $1 RETURNING *", [id]);
 
-    if (deleted.rows.length === 0) {
-      return res.status(404).json({ message: "Мероприятие не найдено" });
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: 'Некорректный ID мероприятия',
+      });
     }
 
-    res.json({ message: "Мероприятие удалено" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Ошибка сервера при удалении" });
+    const event = await Event.findById(id)
+      .populate('venue', 'name building capacity')
+      .lean();
+
+    if (!event) {
+      return res.status(404).json({
+        message: 'Мероприятие не найдено',
+      });
+    }
+
+    res.json({
+      ...event,
+
+      id: event._id.toString(),
+      date: event.startAt,
+      event_date: event.startAt,
+
+      location: event.venue
+        ? `${event.venue.name}, ${event.venue.building}`
+        : 'Не указано',
+
+      availableSeats: Math.max(
+        0,
+        event.capacity - (event.registeredCount || 0)
+      ),
+
+      // Фотографии для галереи
+      images: Array.isArray(event.images)
+        ? event.images
+        : [],
+    });
+  } catch (error) {
+    console.error('Ошибка получения мероприятия:', error);
+
+    res.status(500).json({
+      message: 'Не удалось загрузить мероприятие',
+    });
   }
 });
 
