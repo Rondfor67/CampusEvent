@@ -62,6 +62,9 @@ const applicationSchema = new mongoose.Schema(
       required: true,
     },
 
+    requestType: { type: String, enum: ['create', 'update'], default: 'create' },
+    targetEvent: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', default: null },
+
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected'],

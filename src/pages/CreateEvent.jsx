@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 
 
@@ -227,6 +227,10 @@ function PhotoPreview({ file, index, onRemove }) {
 function CreateEvent() {
 
   const navigate = useNavigate();
+  const { applicationId } = useParams();
+  const isEditing = Boolean(applicationId);
+  const [existingImages, setExistingImages] = useState([]);
+  const [editingLoading, setEditingLoading] = useState(isEditing);
 
 
 
@@ -269,6 +273,37 @@ function CreateEvent() {
   const today = campusDate();
 
 
+
+  // Загружаем только собственную одобренную заявку, не чужие данные.
+  useEffect(() => {
+    if (!isEditing) return;
+    const controller = new AbortController();
+    const token = localStorage.getItem('token');
+    fetch(`${API_URL}/applications/my`, {
+      headers: { Authorization: `Bearer ${token}` }, signal: controller.signal
+    }).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Заявка не найдена');
+      const found = data.find(a => a._id === applicationId && a.status === 'approved' && a.requestType !== 'update');
+      if (!found) throw new Error('Одобренная заявка не найдена');
+      const local = (value) => Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+        timeZone: CAMPUS_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+      }).formatToParts(new Date(value)).map(part => [part.type, part.value]));
+      const start = local(found.startAt), end = local(found.endAt);
+      setForm({
+        title: found.title, category: found.category, description: found.description,
+        building: normalizeBuilding(found.venue?.building), venue: found.venue?._id || '',
+        date: `${start.year}-${start.month}-${start.day}`,
+        startTime: `${start.hour}:${start.minute}`, endTime: `${end.hour}:${end.minute}`,
+        capacity: String(found.capacity), phone: found.phone, comment: found.comment || ''
+      });
+      setExistingImages(found.images || []);
+    }).catch(error => {
+      if (error.name !== 'AbortError') setError(error.message);
+    }).finally(() => { if (!controller.signal.aborted) setEditingLoading(false); });
+    return () => controller.abort();
+  }, [applicationId, isEditing]);
 
   // ========================================
 
@@ -766,7 +801,7 @@ function CreateEvent() {
 
 
 
-    if (saving) {
+    if (saving || editingLoading) {
 
       return;
 
@@ -1026,7 +1061,7 @@ function CreateEvent() {
 
 
 
-    if (hasTimeConflict(start, end)) {
+    if (!isEditing && hasTimeConflict(start, end)) {
 
       setError(
 
@@ -1138,6 +1173,7 @@ function CreateEvent() {
 
 
 
+    // При редактировании старые фото сохраняются, если новые не загружены.
     photos.forEach((file) => {
 
       formData.append('images', file);
@@ -1154,7 +1190,7 @@ function CreateEvent() {
 
       const response = await fetch(
 
-        `${API_URL}/applications`,
+        isEditing ? `${API_URL}/applications/${applicationId}/request-update` : `${API_URL}/applications`,
 
         {
 
@@ -1202,7 +1238,7 @@ function CreateEvent() {
 
           success:
 
-            'Заявка успешно отправлена администратору!',
+            isEditing ? 'Изменения отправлены администратору!' : 'Заявка успешно отправлена администратору!',
 
         },
 
@@ -1274,7 +1310,7 @@ function CreateEvent() {
 
 
 
-          <h1>Создать мероприятие</h1>
+          <h1>{isEditing ? 'Редактировать мероприятие' : 'Создать мероприятие'}</h1>
 
 
 
@@ -1290,6 +1326,8 @@ function CreateEvent() {
 
 
 
+        {editingLoading && <p>Загружаем данные заявки...</p>}
+        {isEditing && existingImages.length > 0 && <p>Ранее загружено фотографий: {existingImages.length}. Без новых файлов они сохранятся.</p>}
         <form
 
           className="create-event-form"
@@ -1856,7 +1894,7 @@ function CreateEvent() {
 
                 disabled={
 
-                  saving ||
+                  saving || editingLoading ||
 
                   photos.length >= MAX_PHOTOS
 
@@ -2098,7 +2136,7 @@ function CreateEvent() {
 
                 ? 'Отправка...'
 
-                : 'Отправить заявку ↗'}
+                : isEditing ? 'Отправить изменения на проверку ↗' : 'Отправить заявку ↗'}
 
             </button>
 

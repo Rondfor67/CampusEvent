@@ -321,6 +321,7 @@ router.post(
 
       // Проверяем опубликованные мероприятия
       const eventConflict = await Event.findOne({
+        status: { $ne: 'cancelled' },
         venue: selectedVenue._id,
         startAt: { $lt: end },
         endAt: { $gt: start },
@@ -397,10 +398,67 @@ router.post(
   }
 );
 
+// POST /api/applications/:id/request-update
+// Автор создаёт отдельную заявку на изменение опубликованного события.
+router.post('/:id/request-update', requireAuth, requireCreator, uploadImages, async (req, res) => {
+  const uploadedPublicIds = [];
+  let saved = false;
+  try {
+    const original = await Application.findOne({
+      _id: mongoose.isValidObjectId(req.params.id) ? req.params.id : null,
+      createdBy: req.user._id, status: 'approved',
+      requestType: { $ne: 'update' }
+    });
+    if (!original) return res.status(404).json({ message: 'Ваша одобренная заявка не найдена' });
+    const event = await Event.findOne({ application: original._id, status: { $ne: 'cancelled' } });
+    if (!event) return res.status(404).json({ message: 'Мероприятие не найдено или отменено' });
+    if (event.startAt <= new Date()) return res.status(409).json({ message: 'Нельзя изменять начавшееся мероприятие' });
+    const existing = await Application.exists({ requestType: 'update', targetEvent: event._id, status: 'pending' });
+    if (existing) return res.status(409).json({ message: 'Запрос на редактирование уже рассматривается' });
+    const { title, category, description, venue, startAt, endAt, capacity, phone, comment } = req.body;
+    if (![title, category, description, phone].every(v => typeof v === 'string' && v.trim()))
+      return res.status(400).json({ message: 'Заполни обязательные поля' });
+    if (!mongoose.isValidObjectId(venue)) return res.status(400).json({ message: 'Некорректное помещение' });
+    const place = await Venue.findOne({ _id: venue, isActive: true });
+    if (!place) return res.status(400).json({ message: 'Помещение недоступно' });
+    const start = new Date(startAt), end = new Date(endAt);
+    if (start <= new Date() || !isValidCampusTime(start, end))
+      return res.status(400).json({ message: 'Некорректные дата и время' });
+    const n = Number(capacity);
+    if (!Number.isInteger(n) || n < Math.max(1, event.registeredCount || 0) || n > place.capacity)
+      return res.status(400).json({ message: 'Вместимость меньше числа участников или превышает лимит помещения' });
+    const conflict = await Event.exists({ _id: { $ne: event._id }, status: { $ne: 'cancelled' },
+      venue: place._id, startAt: { $lt: end }, endAt: { $gt: start } });
+    if (conflict) return res.status(409).json({ message: 'Помещение занято в это время' });
+    const images = [];
+    for (const file of req.files || []) {
+      const result = await uploadToCloudinary(file);
+      images.push(result.secure_url);
+      uploadedPublicIds.push(result.public_id);
+    }
+    const application = await Application.create({
+      requestType: 'update', targetEvent: event._id,
+      title: title.trim(), category: category.trim(), description: description.trim(),
+      venue: place._id, startAt: start, endAt: end, capacity: n,
+      phone: phone.trim(), comment: typeof comment === 'string' ? comment.trim() : '',
+      images: images.length ? images : original.images,
+      createdBy: req.user._id, status: 'pending'
+    });
+    saved = true;
+    return res.status(201).json({ message: 'Запрос на обновление данных отправлен', application });
+  } catch (error) {
+    console.error('Ошибка запроса обновления:', error);
+    return res.status(500).json({ message: 'Не удалось отправить изменения' });
+  } finally {
+    if (!saved && uploadedPublicIds.length) await deleteCloudinaryImages(uploadedPublicIds);
+  }
+});
+
 // ========================================
 // GET /api/applications/my
 // МОИ ЗАЯВКИ
 // ========================================
+
 
 router.get('/my', requireAuth, async (req, res) => {
   try {
@@ -408,9 +466,69 @@ router.get('/my', requireAuth, async (req, res) => {
       createdBy: req.user._id,
     })
       .populate('venue', 'name building')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    return res.json(applications);
+    // Исходные заявки связаны с мероприятиями через Event.application.
+    const originalIds = applications
+      .filter((application) => application.requestType !== 'update')
+      .map((application) => application._id);
+
+    // Заявки на изменение связаны через targetEvent.
+    const targetIds = applications
+      .filter(
+        (application) =>
+          application.requestType === 'update' &&
+          application.targetEvent
+      )
+      .map((application) => application.targetEvent);
+
+    const events = await Event.find({
+      $or: [
+        { application: { $in: originalIds } },
+        { _id: { $in: targetIds } },
+      ],
+    })
+      .select('application status')
+      .lean();
+
+    const statusByApplication = new Map();
+    const statusByEvent = new Map();
+
+    for (const event of events) {
+      if (event.application) {
+        statusByApplication.set(
+          String(event.application),
+          event.status
+        );
+      }
+
+      statusByEvent.set(
+        String(event._id),
+        event.status
+      );
+    }
+
+    // Определяем, было ли мероприятие отменено.
+    const visibleApplications = applications
+      .map((application) => ({
+        ...application,
+        eventStatus:
+          application.requestType === 'update'
+            ? statusByEvent.get(
+                String(application.targetEvent)
+              ) ?? null
+            : statusByApplication.get(
+                String(application._id)
+              ) ?? null,
+      }))
+      // Убираем отменённые мероприятия из профиля.
+      .filter(
+        (application) =>
+          application.eventStatus !== 'cancelled'
+      );
+
+    return res.json(visibleApplications);
   } catch (error) {
     console.error('Ошибка загрузки заявок:', error);
 
@@ -419,6 +537,7 @@ router.get('/my', requireAuth, async (req, res) => {
     });
   }
 });
+
 
 // ========================================
 // GET /api/applications
@@ -557,6 +676,58 @@ router.patch(
         });
       }
 
+      // Обновление существующего мероприятия вместо Event.create.
+      if (application.requestType === 'update') {
+        const venue = await Venue.findOne({ _id: application.venue, isActive: true });
+        if (!venue || application.startAt <= new Date() ||
+            !isValidCampusTime(application.startAt, application.endAt) ||
+            application.capacity > venue.capacity) {
+          return res.status(400).json({ message: 'Некорректное время, место или вместимость' });
+        }
+        const event = await Event.findOne({ _id: application.targetEvent, status: { $ne: 'cancelled' } });
+        if (!event || event.startAt <= new Date()) {
+          return res.status(409).json({ message: 'Мероприятие уже отменено или началось' });
+        }
+        if (application.capacity < (event.registeredCount || 0)) {
+          return res.status(409).json({ message: 'Мест меньше числа зарегистрированных участников' });
+        }
+        const conflict = await Event.exists({ _id: { $ne: event._id }, status: { $ne: 'cancelled' },
+          venue: application.venue, startAt: { $lt: application.endAt }, endAt: { $gt: application.startAt } });
+        if (conflict) return res.status(409).json({ message: 'Помещение занято' });
+        const session = await mongoose.startSession();
+        try {
+          await session.withTransaction(async () => {
+            const changed = await Application.findOneAndUpdate(
+              { _id: id, status: 'pending' },
+              { $set: { status: 'approved', rejectionReason: '' } }, { new: true, session }
+            );
+            if (!changed) { const e = new Error('Заявка уже обработана'); e.status = 409; throw e; }
+            const result = await Event.updateOne(
+              { _id: event._id, status: { $ne: 'cancelled' } },
+              { $set: {
+                title: application.title, category: application.category,
+                description: application.description, venue: application.venue,
+                startAt: application.startAt, endAt: application.endAt,
+                capacity: application.capacity, phone: application.phone,
+                images: application.images
+              } }, { session }
+            );
+            if (!result.matchedCount) { const e = new Error('Мероприятие недоступно'); e.status = 409; throw e; }
+            // Исходная заявка должна отражать уже опубликованные данные для следующих правок.
+            await Application.updateOne(
+              { _id: event.application },
+              { $set: { title: application.title, category: application.category,
+                description: application.description, venue: application.venue,
+                startAt: application.startAt, endAt: application.endAt,
+                capacity: application.capacity, phone: application.phone,
+                images: application.images, comment: application.comment } },
+              { session }
+            );
+          });
+        } finally { await session.endSession(); }
+        return res.json({ message: 'Данные мероприятия обновлены', applicationId: id, eventId: event._id });
+      }
+
       // ========================================
       // ОДОБРЕНИЕ ЗАЯВКИ
       // ========================================
@@ -607,6 +778,7 @@ router.patch(
 
       // Проверяем занятость помещения
       const conflict = await Event.findOne({
+        status: { $ne: 'cancelled' },
         venue: application.venue,
         startAt: {
           $lt: application.endAt,
@@ -697,8 +869,8 @@ router.patch(
         error
       );
 
-      return res.status(500).json({
-        message: 'Не удалось обработать заявку',
+      return res.status(error.status || 500).json({
+        message: error.status ? error.message : 'Не удалось обработать заявку',
       });
     }
   }

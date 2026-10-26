@@ -19,6 +19,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [user, setUser] = useState(getUser);
 
+  // Загрузка активных мероприятий
   useEffect(() => {
     getEvents()
       .then(setEvents)
@@ -26,6 +27,7 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Обновление данных пользователя
   useEffect(() => {
     function updateAuth() {
       setUser(getUser());
@@ -99,7 +101,9 @@ export default function Home() {
         </div>
 
         {loading && (
-          <p role="status">Загружаем мероприятия...</p>
+          <p role="status">
+            Загружаем мероприятия...
+          </p>
         )}
 
         {error && (

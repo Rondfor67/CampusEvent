@@ -1,0 +1,97 @@
+/* Полупрозрачные всплывающие уведомления поверх страницы */
+.floating-notices {
+  position: fixed;
+  top: 92px;
+  right: 24px;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+  width: calc(100% - 32px);
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+.floating-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(186, 49, 49, 0.18);
+  color: #651b1b;
+  border: 1px solid rgba(159, 42, 42, 0.28);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 14px 38px rgba(73, 19, 19, 0.17);
+  animation: notice-in 0.32s ease-out;
+}
+.floating-notice.personal {
+  background: rgba(183, 52, 52, 0.27);
+  border-color: rgba(150, 30, 30, 0.38);
+}
+.floating-notice-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.56);
+  font-size: 18px;
+}
+.floating-notice-content { flex: 1; min-width: 0; }
+.floating-notice-content strong { display: block; margin-bottom: 5px; font-size: 15px; }
+.floating-notice-content p { margin: 0; font-size: 14px; line-height: 1.5; }
+.floating-notice-close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.floating-notice-close:hover { opacity: 0.65; }
+@keyframes notice-in {
+  from { opacity: 0; transform: translate(12px, -12px); }
+  to { opacity: 1; transform: translate(0, 0); }
+}
+@media (max-width: 768px) {
+  .floating-notices { top: 82px; right: 12px; left: 12px; width: auto; max-width: none; }
+  .floating-notice { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floating-notice { animation: none; }
+}
+
+.floating-notice.public,
+.floating-notice.personal {
+  background: rgba(255, 228, 226, 0.96);
+  color: #702020;
+  border: 1px solid rgba(171, 43, 43, 0.4);
+  border-left: 5px solid #b52e2e;
+  box-shadow: 0 12px 35px rgba(64, 15, 15, 0.22);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.floating-notice-content strong {
+  color: #912626;
+  font-weight: 700;
+}
+
+.floating-notice-content p {
+  color: #642222;
+  font-weight: 500;
+}
+
+.floating-notice-icon {
+  background: #af3434;
+  color: white;
+}
+
+.floating-notice-close {
+  color: #872424;
+  opacity: 1;
+}

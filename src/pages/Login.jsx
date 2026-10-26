@@ -70,7 +70,7 @@ function Login() {
       if (data.user.role === 'admin') {
         navigate('/admin', { replace: true });
       } else {
-        navigate('/profile', { replace: true });
+        navigate('/', { replace: true });
       }
 
     } catch (err) {
