@@ -25,6 +25,7 @@ import TicketDetails from './pages/TicketDetails';
 
 import Contacts from './pages/Contacts';
 import Admin from './pages/Admin';
+import NotFound from './pages/NotFound';
 
 import './App.css';
 
@@ -83,6 +84,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   return children;
 }
 
+// Доступ для гостей, студентов и преподавателей
 function GuestOrMemberRoute({ children }) {
   const [user, setUser] = useState(getCurrentUser);
 
@@ -136,7 +138,7 @@ function App() {
             }
           />
 
-          {/* Студенты и преподаватели */}
+          {/* Создание мероприятия */}
           <Route
             path="/events/create"
             element={
@@ -148,11 +150,17 @@ function App() {
             }
           />
 
-          <Route path="/events/edit/:applicationId" element={
-            <ProtectedRoute allowedRoles={['user', 'teacher']}>
-              <CreateEvent />
-            </ProtectedRoute>
-          } />
+          {/* Редактирование заявки */}
+          <Route
+            path="/events/edit/:applicationId"
+            element={
+              <ProtectedRoute
+                allowedRoles={['user', 'teacher']}
+              >
+                <CreateEvent />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Билеты студентов и преподавателей */}
           <Route
@@ -172,7 +180,7 @@ function App() {
             element={<TicketDetails />}
           />
 
-          {/* Контакты — гостям, студентам и преподавателям */}
+          {/* Контакты */}
           <Route
             path="/contacts"
             element={
@@ -192,10 +200,10 @@ function App() {
             }
           />
 
-          {/* Неизвестные страницы */}
+          {/* Страница 404 */}
           <Route
             path="*"
-            element={<Navigate to="/" replace />}
+            element={<NotFound />}
           />
         </Routes>
       </main>

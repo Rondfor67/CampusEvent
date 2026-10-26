@@ -2289,3 +2289,67 @@
     height: 42px;
   }
 }
+
+/* Страница 404 */
+
+.not-found {
+  min-height: 65vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.not-found-code {
+  font-size: clamp(100px, 18vw, 180px);
+  font-weight: 900;
+  line-height: 1;
+  color: #1f2937;
+  letter-spacing: -8px;
+}
+
+.not-found h1 {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 20px 0 12px;
+}
+
+.not-found p {
+  max-width: 460px;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #6b7280;
+  margin: 0 0 30px;
+}
+
+.not-found-button {
+  display: inline-block;
+  padding: 14px 28px;
+  border-radius: 12px;
+  background: #1f2937;
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.not-found-button:hover {
+  background: #374151;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 600px) {
+  .not-found h1 {
+    font-size: 24px;
+  }
+
+  .not-found p {
+    font-size: 14px;
+  }
+
+  .not-found-code {
+    letter-spacing: -4px;
+  }
+}
