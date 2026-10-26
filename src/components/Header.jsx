@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
+import campusLogo from '../assets/campusevents-logo.png';
 
 function getStoredUser() {
   try {
@@ -43,13 +44,19 @@ function Header() {
   return (
     <header className="site-header">
       <div className="nav-wrap">
+        
         <Link className="brand" to="/">
-          <span className="brand-mark">✦</span>
+          <img
+            src={campusLogo}
+            alt=""
+            className="campus-logo-icon"
+          />
 
           <span>
             Campus<span>Events</span>
           </span>
         </Link>
+
 
         <button
           className="mobile-toggle"

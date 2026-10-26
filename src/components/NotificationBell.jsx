@@ -42,37 +42,40 @@ export default function NotificationBell({ user }) {
   }, [token]);
 
 
-  const refresh = useCallback(async () => {
-    if (!token || !account || busy.current) return;
   
-    busy.current = true;
-  
-    try {
-      const data = await api('/');
-      setItems(Array.isArray(data) ? data : []);
-  
-      // Показываем новое уведомление только на главной
-      if (isHomePage && !opened) {
-        const newest = await api('/claim-popup', {
-          method: 'POST',
-        });
-  
-        if (newest) {
-          setToast((current) => current || newest);
-  
-          setItems((previous) =>
-            previous.map((item) =>
-              item._id === newest._id ? newest : item
-            )
-          );
-        }
+const refresh = useCallback(async () => {
+  if (!token || !account || busy.current) return;
+
+  busy.current = true;
+
+  try {
+    const data = await api('/');
+    setItems(Array.isArray(data) ? data : []);
+
+    // Новое всплывающее уведомление получаем
+    // только на главной странице.
+    if (isHomePage) {
+      const newest = await api('/claim-popup', {
+        method: 'POST',
+      });
+
+      if (newest) {
+        setToast((current) => current || newest);
+
+        setItems((previous) =>
+          previous.map((item) =>
+            item._id === newest._id ? newest : item
+          )
+        );
       }
-    } catch (error) {
-      console.error('Ошибка уведомлений:', error);
-    } finally {
-      busy.current = false;
     }
-  }, [api, token, account, isHomePage, opened]);
+  } catch (error) {
+    console.error('Ошибка уведомлений:', error);
+  } finally {
+    busy.current = false;
+  }
+}, [api, token, account, isHomePage]);
+
   
 
   useEffect(() => {
