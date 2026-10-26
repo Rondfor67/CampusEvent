@@ -327,7 +327,7 @@ function Contacts() {
               className="contacts-side-decoration"
               aria-hidden="true"
             >
-              ✳
+             
             </span>
           </aside>
         </div>
