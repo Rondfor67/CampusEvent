@@ -62,8 +62,8 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// GET /api/registrations/my
-// Билеты текущего студента или преподавателя
+//GET /api/registrations/my
+//Билеты текущего юзера
 router.get('/my', requireAuth, requireParticipant, async (req, res) => {
   try {
     const registrations = await Registration.find({
@@ -90,8 +90,8 @@ router.get('/my', requireAuth, requireParticipant, async (req, res) => {
   }
 });
 
-// GET /api/registrations/event/:eventId
-// Участники конкретного мероприятия — только администратор
+//GET /api/registrations/event/:eventId
+//Участники конкретного мероприятия 
 router.get(
   '/event/:eventId',
   requireAuth,
@@ -140,8 +140,8 @@ router.get(
   }
 );
 
-// POST /api/registrations
-// Запись студента на мероприятие
+//POST /api/registrations
+//Запись студента на мероприятие
 router.post('/', requireAuth, requireParticipant, async (req, res) => {
   const { eventId } = req.body;
 
@@ -195,7 +195,7 @@ router.post('/', requireAuth, requireParticipant, async (req, res) => {
         throw error;
       }
 
-      // Увеличиваем счётчик только при наличии свободных мест
+      //Увеличиваем счётчик только при наличии свободных мест
       const updatedEvent = await Event.findOneAndUpdate(
         {
           _id: event._id,
@@ -259,8 +259,8 @@ router.post('/', requireAuth, requireParticipant, async (req, res) => {
 });
 
 
-// GET /api/registrations/ticket/:code
-// Проверка настоящего билета по QR-коду
+//GET /api/registrations/ticket/:code
+//Проверка настоящего билета по qr code
 router.get('/ticket/:code', requireAuth, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
@@ -316,8 +316,8 @@ router.get('/ticket/:code', requireAuth, async (req, res) => {
     });
   }
 });
-// GET /api/registrations/my/cancelled-notices
-// Отменённые билеты текущего пользователя
+//GET /api/registrations/my/cancelled-notices
+//Отменённые билеты текущего пользователя
 router.get(
   '/my/cancelled-notices',
   requireAuth,

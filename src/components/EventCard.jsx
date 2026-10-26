@@ -10,7 +10,7 @@ export default function EventCard({ event }) {
   const date = new Date(event.date);
   const validDate = !Number.isNaN(date.getTime());
 
-  // Первая фотография мероприятия — обложка
+  //pervaya fotka oblozhka
   const coverImage =
     Array.isArray(event.images) && event.images.length > 0
       ? event.images[0]

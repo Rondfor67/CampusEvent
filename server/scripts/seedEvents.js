@@ -10,12 +10,10 @@ import Application from '../models/Application.js';
 
 dns.setServers(['8.8.8.8']);
 
-// Часовой пояс Астаны — UTC+5
 function astanaDate(date, time) {
   return new Date(`${date}T${time}:00+05:00`);
 }
 
-// Только помещения из твоей базы + новая столовая
 const VENUES = {
   HALL: 'Актовый зал',
   SPORT: 'Спортивный зал',
@@ -25,7 +23,6 @@ const VENUES = {
   CANTEEN: 'Столовая',
 };
 
-// Мероприятия, которые уже одобрены
 const approvedEvents = [
   {
     title: 'День Республики Казахстан',
@@ -231,10 +228,8 @@ async function main() {
 
     console.log('Подключено к базе:', dbName);
 
-    // 1. Получаем существующие помещения
     let venues = await Venue.find();
 
-    // 2. Добавляем столовую, если её нет
     let canteen = venues.find(
       (venue) => venue.name.trim().toLowerCase() === 'столовая'
     );
@@ -262,7 +257,6 @@ async function main() {
       ...pendingApplications,
     ];
 
-    // 3. Проверяем помещения и вместимость
     for (const item of allItems) {
       const venue = venueMap.get(item.venueName);
 
@@ -295,7 +289,6 @@ async function main() {
       }
     }
 
-    // 4. Находим студентов и преподавателей
     const authorEmails = [
       ...new Set(allItems.map((item) => item.author)),
     ];
@@ -321,7 +314,6 @@ async function main() {
     let approvedCreated = 0;
     let pendingCreated = 0;
 
-    // 5. Функция создания заявки
     async function createApplication(item, status) {
       const venue = venueMap.get(item.venueName);
       const author = userMap.get(item.author);
@@ -361,7 +353,6 @@ async function main() {
       return { application, venue, author };
     }
 
-    // 6. Создаём одобренные мероприятия
     console.log('\nСоздаём одобренные мероприятия...\n');
 
     for (const item of approvedEvents) {
@@ -394,7 +385,6 @@ async function main() {
       console.log(`Мероприятие создано: ${item.title}`);
     }
 
-    // 7. Создаём заявки на рассмотрении
     console.log('\nСоздаём заявки на рассмотрении...\n');
 
     for (const item of pendingApplications) {
@@ -406,7 +396,6 @@ async function main() {
       if (result) pendingCreated++;
     }
 
-    // 8. Итог
     console.log('\nГОТОВО!');
     console.log('Создано мероприятий:', eventsCreated);
     console.log('Одобренных заявок:', approvedCreated);

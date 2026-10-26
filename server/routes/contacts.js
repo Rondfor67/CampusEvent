@@ -8,7 +8,7 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
-// Проверка администратора
+//Проверка администратора
 async function requireAdmin(req, res, next) {
   try {
     const header = req.headers.authorization || '';
@@ -65,20 +65,20 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Убираем лишние пробелы
+    //Убираем лишние пробелы
     const name = full_name.trim();
     const emailValue = email.trim().toLowerCase();
     const subjectValue = subject.trim();
     const text = message.trim();
 
-    // Проверяем обязательные поля
+    //Проверяем обязательные поля
     if (!name || !emailValue || !subjectValue || !text) {
       return res.status(400).json({
         message: 'Заполни все поля формы',
       });
     }
 
-    // Проверяем длину полей
+    //Проверяем длину полей
     if (
       name.length > 100 ||
       emailValue.length > 254 ||
@@ -90,7 +90,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Проверяем email
+    //Проверяем email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailRegex.test(emailValue)) {
@@ -99,7 +99,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Проверяем авторизацию, если передан токен
+    //Проверяем авторизацию, если передан токен
     const header = req.headers.authorization || '';
     let currentUser = null;
 
@@ -124,7 +124,7 @@ router.post('/', async (req, res) => {
           });
         }
 
-        // Администратор не может отправлять обращения
+        //Администратор не может отправлять обращения
         if (currentUser.role === 'admin') {
           return res.status(403).json({
             message: 'Администратор не может отправлять обращения',
@@ -137,7 +137,7 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Сохраняем обращение в MongoDB
+    //Сохраняем обращение в монго дб
     const contact = await Contact.create({
       full_name: name,
       email: emailValue,
@@ -160,8 +160,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/contacts
-// Список всех обращений — только администратор
+//GET /api/contacts
+//Список всех обращений только админ
 router.get('/', requireAdmin, async (req, res) => {
   try {
     const contacts = await Contact.find()
@@ -178,8 +178,8 @@ router.get('/', requireAdmin, async (req, res) => {
   }
 });
 
-// PATCH /api/contacts/:id/status
-// Изменение статуса обращения — только администратор
+//PATCH /api/contacts/:id/status
+//Изменение статуса обращения только админ
 router.patch(
   '/:id/status',
   requireAdmin,

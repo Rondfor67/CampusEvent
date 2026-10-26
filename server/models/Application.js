@@ -50,7 +50,7 @@ const applicationSchema = new mongoose.Schema(
       default: '',
     },
 
-    // Первая фотография — обложка
+    //Первая фотография обложка
     images: {
       type: [String],
       default: [],

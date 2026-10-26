@@ -63,8 +63,7 @@ const eventSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Первая фотография — обложка,
-    // остальные — галерея
+    //Первая фотография обложка, остальные галерея
     images: {
       type: [String],
       default: [],

@@ -52,8 +52,6 @@ const refresh = useCallback(async () => {
     const data = await api('/');
     setItems(Array.isArray(data) ? data : []);
 
-    // Новое всплывающее уведомление получаем
-    // только на главной странице.
     if (isHomePage) {
       const newest = await api('/claim-popup', {
         method: 'POST',
@@ -92,9 +90,6 @@ const refresh = useCallback(async () => {
     return () => clearInterval(interval);
   }, [account, token, refresh]);
 
-  // Закрытие всплывающего сообщения при
-  // взаимодействии с сайтом.
-  // Закрытие центра при клике снаружи.
   useEffect(() => {
     function handlePointerDown(event) {
       const container = containerRef.current;
@@ -173,7 +168,7 @@ const refresh = useCallback(async () => {
 
   return (
     <div className="notification-anchor" ref={containerRef}>
-      {/* МЕГАФОН В ШАПКЕ */}
+      {/* МЕГАФОН В ШАПКЕ ogo*/}
       <button
         type="button"
         className="notification-bell"

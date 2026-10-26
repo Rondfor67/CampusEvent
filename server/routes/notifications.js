@@ -29,7 +29,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Claim exactly one previously unshown notification, atomically.
 router.post('/claim-popup', async (req, res) => {
   try {
     const item = await Notification.findOneAndUpdate(

@@ -41,7 +41,7 @@ function getCurrentUser() {
   }
 }
 
-// Проверка доступа к страницам
+//Проверка доступа к страницам
 function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
   const [user, setUser] = useState(getCurrentUser);
@@ -84,7 +84,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   return children;
 }
 
-// Доступ для гостей, студентов и преподавателей
+//Доступ для гостей, студентов и преподавателей
 function GuestOrMemberRoute({ children }) {
   const [user, setUser] = useState(getCurrentUser);
 

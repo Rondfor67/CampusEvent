@@ -10,10 +10,8 @@ import Venue from '../models/Venue.js';
 import Application from '../models/Application.js';
 import Event from '../models/Event.js';
 
-// Пароль только для демонстрационных аккаунтов
 const DEMO_PASSWORD = 'CampusDemo2026!';
 
-// 30 вымышленных студентов
 const names = [
   ['Алина', 'Соколова'],
   ['Арман', 'Нурланов'],
@@ -45,11 +43,8 @@ const names = [
   ['Дамир', 'Алиев'],
   ['Элина', 'Романова'],
   ['Бекзат', 'Султанов'],
-];
+]
 
-// Это учебные идентификаторы, а не реальные ИИН.
-// Формат подходит под текущую проверку даты рождения
-// в CampusEvents. Для реальной идентификации не применять.
 function makeDemoIin(index) {
   const years = ['08', '09', '10', '11'];
   const year = years[index % years.length];
@@ -219,7 +214,6 @@ async function seedStudents() {
     const iin = makeDemoIin(i);
     const email = `demo.student${String(i + 1).padStart(2, '0')}@example.com`;
 
-    // Учебный номер-заглушка, не для звонков
     const phone = `DEMO-${String(i + 1).padStart(3, '0')}`;
 
     const allowed = await AllowedStudent.findOne({ iin });
@@ -284,7 +278,6 @@ async function seedEvents(students) {
     const startAt = new Date(plan.start);
     const endAt = new Date(plan.end);
 
-    // Не создаём повторно одно и то же демо-мероприятие
     let application = await Application.findOne({
       title: plan.title,
       createdBy: author._id,
@@ -321,7 +314,6 @@ async function seedEvents(students) {
       continue;
     }
 
-    // Защита от пересечения с опубликованными событиями
     const conflict = await Event.findOne({
       venue: venue._id,
       startAt: { $lt: endAt },

@@ -33,7 +33,7 @@ const registrationSchema = new mongoose.Schema(
   }
 );
 
-// Один студент — одна регистрация на мероприятие
+//один студент одна регистрация на мероприятие
 registrationSchema.index(
   { user: 1, event: 1 },
   { unique: true }

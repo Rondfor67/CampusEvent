@@ -7,8 +7,8 @@ import Application from "../models/Application.js";
 
 const router = express.Router();
 
-// GET /api/venues
-// Получить список доступных помещений
+//GET /api/venues
+//Получить список доступных помещений
 router.get("/", async (req, res) => {
   try {
     const venues = await Venue.find({
@@ -25,21 +25,21 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET /api/venues/:id/availability?date=2026-11-15
-// Получить занятые интервалы помещения на выбранную дату
+//GET /api/venues/:id/availability?date=2026-11-15
+//Получить занятые интервалы помещения на выбранную дату
 router.get("/:id/availability", async (req, res) => {
   try {
     const { id } = req.params;
     const { date } = req.query;
 
-    // Проверяем ID помещения
+    //Проверяем id помещения
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         message: "Некорректный ID помещения",
       });
     }
 
-    // Проверяем формат даты
+    //Проверяем формат даты
     if (
       typeof date !== "string" ||
       !/^\d{4}-\d{2}-\d{2}$/.test(date)
@@ -49,7 +49,7 @@ router.get("/:id/availability", async (req, res) => {
       });
     }
 
-    // Проверяем, существует ли такая дата
+    //Проверяем, существует ли такая дата
     const startOfDay = new Date(`${date}T00:00:00+05:00`);
 
     if (
@@ -70,7 +70,7 @@ router.get("/:id/availability", async (req, res) => {
       startOfDay.getTime() + 24 * 60 * 60 * 1000
     );
 
-    // Ищем помещение
+    //Ищем помещение
     const venue = await Venue.findOne({
       _id: id,
       isActive: true,
@@ -82,8 +82,7 @@ router.get("/:id/availability", async (req, res) => {
       });
     }
 
-    // Получаем одобренные заявки,
-    // время которых пересекается с выбранной датой
+    //Получаем одобренные заявки время которых пересекается с выбранной датой
     const applications = await Application.find({
       venue: venue._id,
       status: "approved",

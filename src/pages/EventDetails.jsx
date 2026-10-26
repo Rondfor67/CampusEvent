@@ -334,9 +334,7 @@ function EventDetails() {
 
         <h1>{event.title}</h1>
 
-        {/* =====================================
-            ГАЛЕРЕЯ ФОТОГРАФИЙ
-            ===================================== */}
+        {/*photo gallery*/}
 
         {images.length > 0 && (
           <section className="event-gallery">
@@ -415,9 +413,7 @@ function EventDetails() {
           />
         </div>
 
-        {/* =====================================
-            АДМИНИСТРАТОР: УЧАСТНИКИ
-            ===================================== */}
+        {/*admin: uchastniki*/}
 
         {isAdmin ? (
           <section>
@@ -528,9 +524,7 @@ function EventDetails() {
         )}
       </div>
 
-      {/* =====================================
-          УВЕЛИЧЕННЫЙ ПРОСМОТР ФОТО
-          ===================================== */}
+      {/*prosmotr photo uvelich*/}
 
       {selectedPhoto !== null && images[selectedPhoto] && (
         <div

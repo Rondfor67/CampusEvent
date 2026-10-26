@@ -16,9 +16,7 @@
 .main-content{min-height:65vh}.events-page,.event-details-page,.tickets-page{width:min(1180px,calc(100% - 44px));margin:65px auto}.events-page h1,.event-details-page h1,.tickets-page h1{font-size:clamp(32px,5vw,52px)}.events-filters{display:flex;gap:16px;margin:25px 0 35px;padding:20px;background:#e7dabc;border-radius:12px}.events-filters>div{display:flex;flex-direction:column;gap:8px;flex:1}.events-filters input,.events-filters select,.event-details-page input{padding:12px 15px;border:1px solid var(--line);border-radius:9px;background:var(--surface);max-width:100%}.event-details-card,.ticket-card{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:30px}.event-details-page form{display:grid;max-width:520px;gap:12px}.event-details-page button{background:var(--red);color:white;border:0;padding:14px;border-radius:9px}.tickets-list{display:grid;gap:20px}.ticket-card{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}.ticket-card-info{min-width:0}.ticket-card-info p{overflow-wrap:anywhere}.ticket-qr{text-align:center}.ticket-qr p{max-width:230px;font-size:12px}.back-link{color:var(--red)}
 @media(max-width:900px){.events-grid{grid-template-columns:repeat(2,1fr)}.nav-links{gap:12px}.nav-actions{display:none}.hero{min-height:550px}}@media(max-width:650px){.mobile-toggle{display:block;margin-left:auto;background:transparent;border:0;font-size:26px}.nav-links{display:none;position:absolute;top:75px;left:0;right:0;background:var(--cream);padding:22px;flex-direction:column;align-items:flex-start;box-shadow:0 20px 25px #472b2018}.nav-links.expanded{display:flex}.events-grid,.feature-grid{grid-template-columns:1fr}.events-filters,.section-heading,.footer-inner{flex-direction:column;align-items:stretch}.hero-content{padding-block:100px}.hero{min-height:500px}.hero h1{letter-spacing:-1px}.events-section{padding-block:55px}}
 
-/* ==========================
-   CONTACTS PAGE — GO CAMPUS
-   ========================== */
+/*Contacts*/
 
 .contacts-page {
   color: var(--text, #56271f);
@@ -1130,9 +1128,7 @@
   }
 }
 
-/* ==============================
-   PROFILE PAGE
-============================== */
+/*Profile*/
 
 .profile-page {
   min-height: 80vh;
@@ -1400,9 +1396,7 @@
   }
 }
 
-/* ============================
-   CREATE EVENT PAGE
-============================ */
+/*Create event page*/
 
 .create-event-page {
   min-height: 80vh;
@@ -1547,7 +1541,7 @@
   }
 }
 
-/* ===== ЗАЯВКИ В ПРОФИЛЕ ===== */
+/*zayavki v profile*/
 
 .profile-applications-card {
   margin-top: 24px;
@@ -1685,9 +1679,7 @@
     grid-template-columns: 1fr;
   }
 }
-/* =====================================
-   ФОТОГРАФИИ ПРИ СОЗДАНИИ МЕРОПРИЯТИЯ
-   ===================================== */
+/*photo*/
 
 .event-upload-description {
   margin-bottom: 16px;
@@ -1768,9 +1760,7 @@
   object-fit: cover;
   object-position: center;
 }
-/* =====================================
-   ГАЛЕРЕЯ МЕРОПРИЯТИЯ
-   ===================================== */
+/*gallery event*/
 
 .event-gallery {
   margin: 24px 0 30px;
@@ -1819,9 +1809,7 @@
   border-radius: 10px;
 }
 
-/* =====================================
-   УВЕЛИЧЕННЫЙ ПРОСМОТР
-   ===================================== */
+/*prosmotr photo*/
 
 .event-photo-lightbox {
   position: fixed;
@@ -1939,9 +1927,7 @@
   transform: translateX(-3px);
 }
 
-/* =====================================
-   КНОПКА ЗАГРУЗКИ ФОТОГРАФИЙ
-   ===================================== */
+/*button photo*/
 
 .event-photo-upload {
   margin-top: 12px;
@@ -2274,7 +2260,7 @@
   flex-shrink: 0;
 }
 
-/* Новый логотип CampusEvents */
+/*Logotip*/
 .campus-logo-icon {
   width: 130px;
   height: 130px;
@@ -2290,7 +2276,7 @@
   }
 }
 
-/* Страница 404 */
+/*404*/
 
 .not-found {
   min-height: 65vh;

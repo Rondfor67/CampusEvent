@@ -5,7 +5,7 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
-// Проверка администратора
+//Проверка администратора
 async function requireAdmin(req, res, next) {
   try {
     const header = req.headers.authorization || '';
@@ -35,7 +35,7 @@ async function requireAdmin(req, res, next) {
   }
 }
 
-// GET /api/users
+//GET /api/users
 router.get('/', requireAdmin, async (req, res) => {
   try {
     const users = await User.find()

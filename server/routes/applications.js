@@ -168,13 +168,8 @@ function requireCreator(req, res, next) {
   }
   next();
 }
+//УВЕДОМЛЕНИЯ
 
-// ======================================
-// УВЕДОМЛЕНИЯ
-// ======================================
-
-// Не прерываем успешно выполненную операцию,
-// если возникла проблема именно с уведомлением.
 async function safelyNotify(action) {
   try {
     await action();
@@ -285,11 +280,8 @@ async function notifyEventUpdated(event, application) {
   );
 }
 
-// ======================================
-// СОЗДАНИЕ ЗАЯВКИ
-// POST /api/applications
-// ======================================
-
+//СОЗДАНИЕ ЗАЯВКИ
+//POST /api/applications
 router.post(
   '/',
   requireAuth,
@@ -427,9 +419,7 @@ router.post(
   }
 );
 
-// ======================================
-// ЗАПРОС НА РЕДАКТИРОВАНИЕ
-// ======================================
+//ЗАПРОС НА РЕДАКТИРОВАНИЕ
 
 router.post(
   '/:id/request-update',
@@ -616,10 +606,7 @@ router.post(
   }
 );
 
-// ======================================
-// МОИ ЗАЯВКИ
-// ======================================
-
+//МОИ ЗАЯВКИ
 router.get('/my', requireAuth, async (req, res) => {
   try {
     const applications = await Application.find({
@@ -693,9 +680,8 @@ router.get('/my', requireAuth, async (req, res) => {
   }
 });
 
-// ======================================
 // ЗАЯВКИ АДМИНИСТРАТОРА
-// ======================================
+
 
 router.get(
   '/',
@@ -735,9 +721,7 @@ router.get(
   }
 );
 
-// ======================================
-// ОДОБРЕНИЕ И ОТКЛОНЕНИЕ
-// ======================================
+//ОДОБРЕНИЕ И ОТКЛОНЕНИЕ
 
 router.patch(
   '/:id/status',
@@ -774,7 +758,7 @@ router.patch(
         });
       }
 
-      // ОТКЛОНЕНИЕ
+      //ОТКЛОНЕНИЕ
       if (status === 'rejected') {
         if (
           typeof rejectionReason !== 'string' ||
@@ -812,7 +796,7 @@ router.patch(
         });
       }
 
-      // ОДОБРЕНИЕ ОБНОВЛЕНИЯ
+      //ОДОБРЕНИЕ ОБНОВЛЕНИЯ
       if (application.requestType === 'update') {
         const venue = await Venue.findOne({
           _id: application.venue,

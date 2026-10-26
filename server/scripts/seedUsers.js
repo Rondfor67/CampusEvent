@@ -91,7 +91,6 @@ function makeDemoIin(index, role) {
   const month = String((index % 12) + 1).padStart(2, '0');
   const day = String((index % 28) + 1).padStart(2, '0');
 
-  // Последние 5 цифр — уникальный тестовый номер.
   const serial = String(
     role === 'teacher' ? 50000 + index : 10000 + index
   ).padStart(5, '0');
@@ -100,7 +99,6 @@ function makeDemoIin(index, role) {
 }
 
 function makeDemoPhone(index) {
-  // Номер-заглушка. Не использовать для SMS.
   return `+7000000${String(index).padStart(4, '0')}`;
 }
 
@@ -156,7 +154,6 @@ async function main() {
           ? 'allowed_teachers'
           : 'allowed_students';
 
-      // Сначала добавляем в разрешённый список.
       await db.collection(allowedCollection).updateOne(
         { iin },
         {
@@ -170,7 +167,6 @@ async function main() {
         { upsert: true }
       );
 
-      // Затем создаём аккаунт, если его ещё нет.
       const existing = await User.findOne({ email });
 
       if (existing) {

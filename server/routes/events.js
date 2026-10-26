@@ -10,10 +10,8 @@ import Notification from '../models/Notification.js';
 
 const router = express.Router();
 
-// ========================================
-// GET /api/events
-// Все активные мероприятия
-// ========================================
+//GET /api/events
+//Все активные мероприятия
 
 router.get('/', async (req, res) => {
   try {
@@ -54,10 +52,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ========================================
-// GET /api/events/cancelled
-// Отменённые мероприятия
-// ========================================
+//GET /api/events/cancelled
+//Отменённые мероприятия
+
 
 router.get('/cancelled', async (req, res) => {
   try {
@@ -79,10 +76,8 @@ router.get('/cancelled', async (req, res) => {
   }
 });
 
-// ========================================
-// GET /api/events/:id
-// Одно активное мероприятие
-// ========================================
+//GET /api/events/:id
+//Одно активное мероприятие
 
 router.get('/:id', async (req, res) => {
   try {
@@ -138,10 +133,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ========================================
-// PATCH /api/events/:id/cancel
-// Отмена мероприятия администратором
-// ========================================
+//PATCH /api/events/:id/cancel
+//Отмена мероприятия администратором
 
 router.patch('/:id/cancel', async (req, res) => {
   try {
@@ -175,7 +168,7 @@ router.patch('/:id/cancel', async (req, res) => {
       });
     }
 
-    // Проверка ID
+    //Проверка ID
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({
         message: 'Некорректный ID мероприятия'
@@ -200,7 +193,7 @@ router.patch('/:id/cancel', async (req, res) => {
 
     try {
       await session.withTransaction(async () => {
-        // 1. Отменяем мероприятие
+        //Отменяем мероприятие
         const updated = await Event.findOneAndUpdate(
           {
             _id: event._id,
@@ -223,7 +216,7 @@ router.patch('/:id/cancel', async (req, res) => {
           throw error;
         }
 
-        // 2. Находим получателей уведомлений
+        //Находим получателей уведомлений
         const recipients = await Registration.distinct(
           'user',
           {
@@ -232,14 +225,14 @@ router.patch('/:id/cancel', async (req, res) => {
           }
         ).session(session);
 
-        // 3. Аннулируем билеты
+        //Аннулируем билеты
         await Registration.updateMany(
           { event: event._id },
           { $set: { status: 'cancelled' } },
           { session }
         );
 
-        // 4. Создаём уведомления
+        //Создаём уведомления
         if (recipients.length > 0) {
           await Notification.bulkWrite(
             recipients.map((recipient) => ({

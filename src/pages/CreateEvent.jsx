@@ -102,11 +102,7 @@ function formatTime(value) {
 
 
 
-// Приводим корпуса из MongoDB к одному формату.
-
-// С1.3 (кириллическая С) -> C1.3
-
-// 1.3 -> C1.3
+//korpusa v odnom formate
 
 function normalizeBuilding(building) {
 
@@ -120,15 +116,7 @@ function normalizeBuilding(building) {
 
 }
 
-
-
-// ========================================
-
-// ПРЕДПРОСМОТР ФОТОГРАФИЙ
-
-// ========================================
-
-
+//predprosmotr photo
 
 function PhotoPreview({ file, index, onRemove }) {
 
@@ -216,12 +204,7 @@ function PhotoPreview({ file, index, onRemove }) {
 
 
 
-// ========================================
-
-// СОЗДАНИЕ МЕРОПРИЯТИЯ
-
-// ========================================
-
+//create events
 
 
 function CreateEvent() {
@@ -305,59 +288,34 @@ function CreateEvent() {
     return () => controller.abort();
   }, [applicationId, isEditing]);
 
-  // ========================================
-
-  // ЗАГРУЗКА ПОМЕЩЕНИЙ ИЗ MONGODB
-
-  // ========================================
-
-
+  //pomesheniya is bd
 
   useEffect(() => {
-
     let cancelled = false;
-
-
-
     async function loadVenues() {
-
       try {
-
         const response = await fetch(
 
           `${API_URL}/venues`
 
         );
 
-
-
         const data = await response.json();
-
-
 
         if (!response.ok) {
 
           throw new Error(
-
             data.message || 'Ошибка загрузки помещений'
-
           );
 
         }
-
-
-
         if (!Array.isArray(data)) {
 
           throw new Error(
-
             'Некорректный ответ сервера'
-
           );
 
         }
-
-
 
         if (!cancelled) {
 
@@ -385,8 +343,6 @@ function CreateEvent() {
 
     }
 
-
-
     loadVenues();
 
 
@@ -398,75 +354,41 @@ function CreateEvent() {
     };
 
   }, []);
-
-
-
-  // ========================================
-
-  // ПРОВЕРКА ЗАНЯТОСТИ ПОМЕЩЕНИЯ
-
-  // ========================================
-
-
-
+  //proverka zanyatosti
   useEffect(() => {
 
     let cancelled = false;
-
-
-
     setOccupied([]);
-
     setAvailabilityError('');
-
-
 
     if (!form.venue || !form.date) {
 
       setLoadingAvailability(false);
-
       return;
-
     }
 
-
-
     setLoadingAvailability(true);
-
-
 
     async function loadAvailability() {
 
       try {
 
         const response = await fetch(
-
           `${API_URL}/venues/${encodeURIComponent(
-
             form.venue
-
           )}/availability?date=${encodeURIComponent(
-
             form.date
-
           )}`
 
         );
 
-
-
         const data = await response.json();
-
-
 
         if (!response.ok) {
 
           throw new Error(
-
             data.message ||
-
               'Не удалось проверить занятость помещения'
-
           );
 
         }
@@ -476,7 +398,6 @@ function CreateEvent() {
         if (!cancelled) {
 
           setOccupied(data.occupied || []);
-
         }
 
       } catch (err) {
@@ -486,24 +407,15 @@ function CreateEvent() {
           setAvailabilityError(err.message);
 
         }
-
       } finally {
 
         if (!cancelled) {
-
           setLoadingAvailability(false);
-
         }
-
       }
-
     }
 
-
-
     loadAvailability();
-
-
 
     return () => {
 
@@ -513,16 +425,7 @@ function CreateEvent() {
 
   }, [form.venue, form.date]);
 
-
-
-  // ========================================
-
-  // КОРПУСА И ПОМЕЩЕНИЯ
-
-  // ========================================
-
-
-
+//korpusa i pomesheniya
   const buildings = [
 
     ...new Set(
@@ -537,8 +440,6 @@ function CreateEvent() {
 
   ].sort();
 
-
-
   const filteredVenues = venues.filter(
 
     (venue) =>
@@ -549,29 +450,17 @@ function CreateEvent() {
 
   );
 
-
-
   const selectedVenue = venues.find(
 
     (venue) => venue._id === form.venue
 
   );
 
-
-
-  // ========================================
-
-  // ИЗМЕНЕНИЕ ПОЛЕЙ ФОРМЫ
-
-  // ========================================
-
-
+//change polya formy
 
   function handleChange(event) {
 
     const { name, value } = event.target;
-
-
 
     setForm((previous) => {
 
@@ -591,8 +480,6 @@ function CreateEvent() {
 
       }
 
-
-
       if (name === 'venue') {
 
         return {
@@ -606,8 +493,6 @@ function CreateEvent() {
         };
 
       }
-
-
 
       return {
 
@@ -625,16 +510,7 @@ function CreateEvent() {
 
   }
 
-
-
-  // ========================================
-
-  // ДОБАВЛЕНИЕ ФОТОГРАФИЙ
-
-  // ========================================
-
-
-
+  //add photo
   function handlePhotos(event) {
 
     const selectedFiles = Array.from(
@@ -643,11 +519,7 @@ function CreateEvent() {
 
     );
 
-
-
     const combined = [...photos, ...selectedFiles];
-
-
 
     if (combined.length > MAX_PHOTOS) {
 
@@ -657,15 +529,11 @@ function CreateEvent() {
 
       );
 
-
-
       event.target.value = '';
 
       return;
 
     }
-
-
 
     const invalidType = combined.find(
 
@@ -675,8 +543,6 @@ function CreateEvent() {
 
     );
 
-
-
     if (invalidType) {
 
       setPhotoError(
@@ -684,8 +550,6 @@ function CreateEvent() {
         'Разрешены только JPG, PNG и WebP.'
 
       );
-
-
 
       event.target.value = '';
 
@@ -711,29 +575,19 @@ function CreateEvent() {
 
       );
 
-
-
       event.target.value = '';
 
       return;
 
     }
 
-
-
     setPhotos(combined);
-
     setPhotoError('');
-
     setError('');
-
-
 
     event.target.value = '';
 
   }
-
-
 
   function removePhoto(index) {
 
@@ -743,22 +597,11 @@ function CreateEvent() {
 
     );
 
-
-
     setPhotoError('');
 
   }
 
-
-
-  // ========================================
-
-  // ПРОВЕРКА КОНФЛИКТОВ ВРЕМЕНИ
-
-  // ========================================
-
-
-
+//proverka vremeni esli zanyato
   function hasTimeConflict(start, end) {
 
     return occupied.some((item) => {
@@ -781,37 +624,20 @@ function CreateEvent() {
 
   }
 
-
-
-  // ========================================
-
-  // ОТПРАВКА ЗАЯВКИ
-
-  // ========================================
-
-
+  //send zayavku
 
   async function handleSubmit(event) {
 
     event.preventDefault();
 
-
-
     setError('');
-
-
 
     if (saving || editingLoading) {
 
       return;
 
     }
-
-
-
     const token = localStorage.getItem('token');
-
-
 
     if (!token) {
 
@@ -825,42 +651,24 @@ function CreateEvent() {
 
       });
 
-
-
       return;
 
     }
 
-
-
     const requiredFields = [
 
       'title',
-
       'category',
-
       'description',
-
       'building',
-
       'venue',
-
       'date',
-
       'startTime',
-
       'endTime',
-
       'capacity',
-
       'phone',
-
     ];
-
-
-
     if (
-
       requiredFields.some(
 
         (key) => !String(form[key]).trim()
@@ -870,33 +678,21 @@ function CreateEvent() {
     ) {
 
       setError('Заполни все обязательные поля.');
-
       return;
-
     }
-
-
 
     if (!selectedVenue) {
 
       setError('Выбери помещение из списка.');
-
       return;
-
     }
-
-
 
     if (photoError) {
 
       setError(photoError);
 
       return;
-
     }
-
-
-
     const start = new Date(
 
       toCampusISO(
@@ -908,8 +704,6 @@ function CreateEvent() {
       )
 
     );
-
-
 
     const end = new Date(
 
@@ -923,8 +717,6 @@ function CreateEvent() {
 
     );
 
-
-
     if (
 
       Number.isNaN(start.getTime()) ||
@@ -932,20 +724,14 @@ function CreateEvent() {
       Number.isNaN(end.getTime())
 
     ) {
-
       setError(
 
         'Укажи корректную дату и время.'
 
       );
-
-
-
       return;
 
     }
-
-
 
     if (start <= new Date()) {
 
@@ -954,15 +740,8 @@ function CreateEvent() {
         'Нельзя создавать мероприятие в прошлом.'
 
       );
-
-
-
       return;
-
     }
-
-
-
     if (end <= start) {
 
       setError(
@@ -970,14 +749,9 @@ function CreateEvent() {
         'Время окончания должно быть позже начала.'
 
       );
-
-
-
       return;
 
     }
-
-
 
     if (form.startTime < '07:00' || form.startTime > '19:00') {
 
@@ -987,13 +761,9 @@ function CreateEvent() {
 
       );
 
-
-
       return;
 
     }
-
-
 
     if (form.endTime < '07:00' || form.endTime > '21:00') {
 
@@ -1002,18 +772,10 @@ function CreateEvent() {
         'Мероприятие должно заканчиваться с 07:00 до 21:00.'
 
       );
-
-
-
       return;
 
     }
-
-
-
     const capacity = Number(form.capacity);
-
-
 
     if (
 
@@ -1030,14 +792,8 @@ function CreateEvent() {
         `Количество участников должно быть от 1 до ${selectedVenue.capacity}.`
 
       );
-
-
-
       return;
-
     }
-
-
 
     if (
 
@@ -1052,15 +808,9 @@ function CreateEvent() {
         'Не удалось подтвердить доступность помещения. Попробуй ещё раз.'
 
       );
-
-
-
       return;
 
     }
-
-
-
     if (!isEditing && hasTimeConflict(start, end)) {
 
       setError(
@@ -1068,20 +818,11 @@ function CreateEvent() {
         'Помещение уже занято в выбранное время. Выбери другой интервал.'
 
       );
-
-
-
       return;
-
     }
-
-
-
-    // Отправляем обычные поля и фотографии вместе.
+    //oтправляем обычные поля и фотографии вместе.
 
     const formData = new FormData();
-
-
 
     formData.append(
 
@@ -1091,8 +832,6 @@ function CreateEvent() {
 
     );
 
-
-
     formData.append(
 
       'category',
@@ -1100,8 +839,6 @@ function CreateEvent() {
       form.category
 
     );
-
-
 
     formData.append(
 
@@ -1111,8 +848,6 @@ function CreateEvent() {
 
     );
 
-
-
     formData.append(
 
       'venue',
@@ -1120,8 +855,6 @@ function CreateEvent() {
       form.venue
 
     );
-
-
 
     formData.append(
 
@@ -1131,8 +864,6 @@ function CreateEvent() {
 
     );
 
-
-
     formData.append(
 
       'endAt',
@@ -1140,9 +871,6 @@ function CreateEvent() {
       end.toISOString()
 
     );
-
-
-
     formData.append(
 
       'capacity',
@@ -1150,9 +878,6 @@ function CreateEvent() {
       String(capacity)
 
     );
-
-
-
     formData.append(
 
       'phone',
@@ -1160,9 +885,6 @@ function CreateEvent() {
       form.phone.trim()
 
     );
-
-
-
     formData.append(
 
       'comment',
@@ -1170,22 +892,13 @@ function CreateEvent() {
       form.comment.trim()
 
     );
-
-
-
-    // При редактировании старые фото сохраняются, если новые не загружены.
+    //при редактировании старые фото сохраняются, если новые не загружены.
     photos.forEach((file) => {
 
       formData.append('images', file);
 
     });
-
-
-
     setSaving(true);
-
-
-
     try {
 
       const response = await fetch(
@@ -1193,31 +906,17 @@ function CreateEvent() {
         isEditing ? `${API_URL}/applications/${applicationId}/request-update` : `${API_URL}/applications`,
 
         {
-
           method: 'POST',
-
           headers: {
-
             Authorization: `Bearer ${token}`,
-
           },
-
           body: formData,
-
         }
-
       );
 
-
-
       const data = await response
-
         .json()
-
         .catch(() => ({}));
-
-
-
       if (!response.ok) {
 
         throw new Error(
@@ -1229,17 +928,12 @@ function CreateEvent() {
         );
 
       }
-
-
-
       navigate('/profile', {
 
         state: {
 
           success:
-
             isEditing ? 'Изменения отправлены администратору!' : 'Заявка успешно отправлена администратору!',
-
         },
 
       });
@@ -1251,7 +945,6 @@ function CreateEvent() {
         err.message ||
 
           'Ошибка отправки заявки'
-
       );
 
     } finally {
@@ -1261,17 +954,7 @@ function CreateEvent() {
     }
 
   }
-
-
-
-  // ========================================
-
-  // ИНТЕРФЕЙС
-
-  // ========================================
-
-
-
+  //inteface
   return (
 
     <section className="create-event-page">
@@ -1279,9 +962,6 @@ function CreateEvent() {
       <div className="create-event-container">
 
         {/* КНОПКА НАЗАД */}
-
-
-
         <button
 
           type="button"
@@ -1291,14 +971,11 @@ function CreateEvent() {
           onClick={() => navigate(-1)}
 
         >
-
           <span>←</span>
 
           Назад
 
         </button>
-
-
 
         <div className="create-event-heading">
 
@@ -1308,12 +985,7 @@ function CreateEvent() {
 
           </span>
 
-
-
           <h1>{isEditing ? 'Редактировать мероприятие' : 'Создать мероприятие'}</h1>
-
-
-
           <p>
 
             Расскажи о своём мероприятии и отправь
@@ -1323,8 +995,6 @@ function CreateEvent() {
           </p>
 
         </div>
-
-
 
         {editingLoading && <p>Загружаем данные заявки...</p>}
         {isEditing && existingImages.length > 0 && <p>Ранее загружено фотографий: {existingImages.length}. Без новых файлов они сохранятся.</p>}
@@ -1338,21 +1008,15 @@ function CreateEvent() {
 
           {/* ОСНОВНАЯ ИНФОРМАЦИЯ */}
 
-
-
           <div className="create-event-section">
 
             <h2>Основная информация</h2>
-
-
 
             <label htmlFor="event-title">
 
               Название мероприятия *
 
             </label>
-
-
 
             <input
 
@@ -1370,15 +1034,11 @@ function CreateEvent() {
 
             />
 
-
-
             <label htmlFor="event-category">
 
               Категория *
 
             </label>
-
-
 
             <select
 
@@ -1480,25 +1140,17 @@ function CreateEvent() {
 
           </div>
 
-
-
           {/* МЕСТО И ВРЕМЯ */}
-
-
 
           <div className="create-event-section">
 
             <h2>Место и время</h2>
-
-
 
             <label htmlFor="event-building">
 
               Корпус *
 
             </label>
-
-
 
             <select
 
@@ -1554,8 +1206,6 @@ function CreateEvent() {
 
             </label>
 
-
-
             <select
 
               id="event-venue"
@@ -1588,8 +1238,6 @@ function CreateEvent() {
 
               </option>
 
-
-
               {filteredVenues.map((venue) => (
 
                 <option
@@ -1610,8 +1258,6 @@ function CreateEvent() {
 
             </select>
 
-
-
             <div className="create-event-row">
 
               <div>
@@ -1621,8 +1267,6 @@ function CreateEvent() {
                   Дата *
 
                 </label>
-
-
 
                 <input
 
@@ -1644,8 +1288,6 @@ function CreateEvent() {
 
               </div>
 
-
-
               <div>
 
                 <label htmlFor="event-capacity">
@@ -1653,8 +1295,6 @@ function CreateEvent() {
                   Количество мест *
 
                 </label>
-
-
 
                 <input
 
@@ -1698,8 +1338,6 @@ function CreateEvent() {
 
             </div>
 
-
-
             <div className="create-event-row">
 
               <div>
@@ -1709,8 +1347,6 @@ function CreateEvent() {
                   Время начала *
 
                 </label>
-
-
 
                 <input
 
@@ -1733,8 +1369,6 @@ function CreateEvent() {
 
               </div>
 
-
-
               <div>
 
                 <label htmlFor="event-end">
@@ -1742,8 +1376,6 @@ function CreateEvent() {
                   Время окончания *
 
                 </label>
-
-
 
                 <input
 
@@ -1768,11 +1400,7 @@ function CreateEvent() {
 
             </div>
 
-
-
             {/* ЗАНЯТОСТЬ ПОМЕЩЕНИЯ */}
-
-
 
             {form.venue && form.date && (
 
@@ -1850,17 +1478,10 @@ function CreateEvent() {
 
           </div>
 
-
-
           {/* ФОТОГРАФИИ */}
-
-
-
           <div className="create-event-section">
 
             <h2>Фотографии мероприятия</h2>
-
-
 
             <p className="event-upload-description">
 
@@ -1873,8 +1494,6 @@ function CreateEvent() {
               показаны в галерее.
 
             </p>
-
-
 
             <div className="event-photo-upload">
 
@@ -1902,8 +1521,6 @@ function CreateEvent() {
 
               />
 
-
-
               <label
 
                 htmlFor="event-photos"
@@ -1926,8 +1543,6 @@ function CreateEvent() {
 
                 </span>
 
-
-
                 <span>
 
                   {photos.length >= MAX_PHOTOS
@@ -1941,9 +1556,6 @@ function CreateEvent() {
               </label>
 
             </div>
-
-
-
             <p className="event-upload-hint">
 
               JPG, PNG или WebP.
@@ -1953,9 +1565,6 @@ function CreateEvent() {
               Выбрано: {photos.length} из 6.
 
             </p>
-
-
-
             {photoError && (
 
               <p
@@ -1971,8 +1580,6 @@ function CreateEvent() {
               </p>
 
             )}
-
-
 
             {photos.length > 0 && (
 
@@ -2003,26 +1610,17 @@ function CreateEvent() {
             )}
 
           </div>
-
-
-
           {/* КОНТАКТНАЯ ИНФОРМАЦИЯ */}
-
-
 
           <div className="create-event-section">
 
             <h2>Контактная информация</h2>
-
-
 
             <label htmlFor="event-phone">
 
               Контактный телефон *
 
             </label>
-
-
 
             <input
 
@@ -2042,15 +1640,11 @@ function CreateEvent() {
 
             />
 
-
-
             <label htmlFor="event-comment">
 
               Дополнительный комментарий
 
             </label>
-
-
 
             <textarea
 
@@ -2070,11 +1664,7 @@ function CreateEvent() {
 
           </div>
 
-
-
           {/* ОШИБКА */}
-
-
 
           {error && (
 
@@ -2092,11 +1682,7 @@ function CreateEvent() {
 
           )}
 
-
-
           {/* ОТПРАВКА */}
-
-
 
           <div className="create-event-footer">
 
@@ -2107,8 +1693,6 @@ function CreateEvent() {
               администратору на рассмотрение.
 
             </p>
-
-
 
             <button
 
@@ -2137,21 +1721,11 @@ function CreateEvent() {
                 ? 'Отправка...'
 
                 : isEditing ? 'Отправить изменения на проверку ↗' : 'Отправить заявку ↗'}
-
             </button>
-
           </div>
-
         </form>
-
       </div>
-
     </section>
-
   );
-
 }
-
-
-
 export default CreateEvent;
