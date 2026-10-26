@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+
 const contactItems = [
   {
     icon: '✉',
@@ -62,7 +64,7 @@ function Contacts() {
     try {
       const token = localStorage.getItem('token');
 
-      const response = await fetch('/api/contacts', {
+      const response = await fetch(`${API_URL}/contacts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +131,7 @@ function Contacts() {
               <span>✉</span>
             </div>
             <span className="contacts-decoration contacts-decoration-one">
-              ✳
+              
             </span>
             <span className="contacts-decoration contacts-decoration-two">
               ✦
@@ -325,7 +327,7 @@ function Contacts() {
               className="contacts-side-decoration"
               aria-hidden="true"
             >
-              ✳
+             
             </span>
           </aside>
         </div>

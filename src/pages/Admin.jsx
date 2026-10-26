@@ -1,6 +1,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+
 const TIME_ZONE = 'Asia/Almaty';
 
 function formatDate(date) {
@@ -87,7 +89,7 @@ function Admin() {
   const request = useCallback(async (path, options = {}) => {
     const token = localStorage.getItem('token');
 
-    const response = await fetch(path, {
+    const response = await fetch(`${API_URL}${path.replace(/^\/api(?=\/|$)/, '')}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
