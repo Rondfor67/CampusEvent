@@ -131,7 +131,7 @@ function Contacts() {
               <span>✉</span>
             </div>
             <span className="contacts-decoration contacts-decoration-one">
-              ✳
+              
             </span>
             <span className="contacts-decoration contacts-decoration-two">
               ✦
