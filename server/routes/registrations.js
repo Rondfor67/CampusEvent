@@ -164,6 +164,15 @@ router.post('/', requireAuth, requireParticipant, async (req, res) => {
         error.status = 404;
         throw error;
       }
+      
+      if (event.status === 'cancelled') {
+        const error = new Error(
+          'Регистрация невозможна: мероприятие отменено'
+        );
+        error.status = 409;
+        throw error;
+      }
+
 
       if (event.startAt <= new Date()) {
         const error = new Error(
@@ -191,6 +200,7 @@ router.post('/', requireAuth, requireParticipant, async (req, res) => {
         {
           _id: event._id,
           registeredCount: { $lt: event.capacity },
+          status: { $ne: 'cancelled' },
         },
         { $inc: { registeredCount: 1 } },
         { new: true, session }
@@ -306,5 +316,42 @@ router.get('/ticket/:code', requireAuth, async (req, res) => {
     });
   }
 });
+// GET /api/registrations/my/cancelled-notices
+// Отменённые билеты текущего пользователя
+router.get(
+  '/my/cancelled-notices',
+  requireAuth,
+  requireParticipant,
+  async (req, res) => {
+    try {
+      const registrations = await Registration.find({
+        user: req.user._id,
+        status: 'cancelled',
+      })
+        .populate({
+          path: 'event',
+          select: 'title cancelledAt status startAt',
+        })
+        .sort({ updatedAt: -1 });
 
+      const result = registrations
+        .filter((registration) => registration.event)
+        .map((registration) => ({
+          id: registration._id,
+          ticketCode: registration.ticketCode,
+          eventId: registration.event._id,
+          title: registration.event.title,
+          cancelledAt: registration.event.cancelledAt || registration.updatedAt,
+          message: `Ваш билет на мероприятие «${registration.event.title}» аннулирован, потому что мероприятие было отменено.`,
+        }));
+
+      return res.json(result);
+    } catch (error) {
+      console.error('Ошибка загрузки уведомлений об отмене:', error);
+      return res.status(500).json({
+        message: 'Не удалось загрузить уведомления об отмене',
+      });
+    }
+  }
+);
 export default router;

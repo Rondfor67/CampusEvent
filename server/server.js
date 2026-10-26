@@ -14,6 +14,7 @@ import usersRouter from './routes/users.js';
 // Новые маршруты
 import venuesRouter from "./routes/venues.js";
 import applicationsRouter from "./routes/applications.js";
+import notificationsRouter from "./routes/notifications.js";
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use('/api/contacts', contactsRouter);
 // Новые API
 app.use("/api/venues", venuesRouter);
 app.use("/api/applications", applicationsRouter);
+app.use("/api/notifications", notificationsRouter);
 
 // Неизвестные маршруты
 app.use((req, res) => {

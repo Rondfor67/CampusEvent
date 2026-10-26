@@ -45,6 +45,18 @@ const eventSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    
+    status: {
+      type: String,
+      enum: ['published', 'cancelled'],
+      default: 'published',
+    },
+
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+
 
     phone: {
       type: String,

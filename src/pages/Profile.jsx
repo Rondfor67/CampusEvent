@@ -124,7 +124,9 @@ function Profile() {
           throw new Error('Сервер вернул некорректные данные');
         }
 
-        setApplications(data);
+        // Дополнительная защита: не отображаем отменённые мероприятия,
+        // если API передаёт статус связанного Event.
+        setApplications(data.filter((application) => application.eventStatus !== 'cancelled'));
       } catch (error) {
         if (error.name !== 'AbortError') {
           setApplicationsError(error.message);
@@ -367,6 +369,15 @@ function Profile() {
                           {application.capacity}
                         </p>
                       </div>
+
+                      {application.status === 'approved' && application.requestType !== 'update' && (
+                        <Link className="btn btn-secondary" to={`/events/edit/${application._id}`}>
+                          Отправить запрос на редактирование
+                        </Link>
+                      )}
+                      {application.requestType === 'update' && (
+                        <p className="profile-application-reason">Тип заявки: Обновить данные</p>
+                      )}
 
                       {application.status === 'rejected' &&
                         application.rejectionReason && (
