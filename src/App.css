@@ -2306,7 +2306,7 @@
   font-size: clamp(100px, 18vw, 180px);
   font-weight: 900;
   line-height: 1;
-  color: #1f2937;
+  color: #c63c25;
   letter-spacing: -8px;
 }
 
@@ -2328,7 +2328,7 @@
   display: inline-block;
   padding: 14px 28px;
   border-radius: 12px;
-  background: #1f2937;
+  background: #c63c25;
   color: #ffffff;
   text-decoration: none;
   font-weight: 600;
@@ -2336,7 +2336,7 @@
 }
 
 .not-found-button:hover {
-  background: #374151;
+  background: #c63c25;
   transform: translateY(-2px);
 }
 
