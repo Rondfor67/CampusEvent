@@ -73,6 +73,7 @@ function Admin() {
   const [activeTab, setActiveTab] = useState('events');
 
   const [events, setEvents] = useState([]);
+  const [publishedEvents, setPublishedEvents] = useState([]);
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
 
@@ -123,6 +124,11 @@ function Admin() {
         );
 
         setEvents(Array.isArray(data) ? data : []);
+        const published = await request('/api/events');
+        setPublishedEvents(
+          Array.isArray(published) ? published : []
+        );
+
       } else if (activeTab === 'messages') {
         const data = await request('/api/contacts');
 
@@ -176,7 +182,7 @@ function Admin() {
 
       setNotice(
         status === 'approved'
-          ? 'Заявка одобрена. Мероприятие опубликовано.'
+          ? selectedEvent.requestType === 'update' ? 'Изменения опубликованы.' : 'Заявка одобрена. Мероприятие опубликовано.'
           : 'Заявка отклонена.'
       );
 
@@ -185,6 +191,37 @@ function Admin() {
       setRejectionReason('');
 
       await loadData();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+  
+  async function cancelPublishedEvent(event) {
+    if (submitting) return;
+
+    const confirmed = window.confirm(
+      `Отменить мероприятие «${event.title}»?\n\n` +
+      'Все билеты участников будут аннулированы.'
+    );
+
+    if (!confirmed) return;
+
+    setSubmitting(true);
+    setError('');
+    setNotice('');
+
+    try {
+      await request(`/api/events/${event._id || event.id}/cancel`, {
+        method: 'PATCH',
+      });
+
+      await loadData();
+      setNotice(
+        `Мероприятие «${event.title}» отменено. ` +
+        'Билеты участников аннулированы.'
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -315,7 +352,7 @@ function Admin() {
               {!selectedEvent ? (
                 <>
                   <div className="admin-section-heading">
-                    <h2>Заявки на публикацию</h2>
+                    <h2>Заявки на рассмотрении</h2>
                     <span>{events.length} заявок</span>
                   </div>
 
@@ -337,7 +374,7 @@ function Admin() {
                         >
                           <div className="admin-item-info">
                             <span className="admin-status">
-                              Ожидает проверки
+                              {event.requestType === 'update' ? 'Обновить данные' : 'Создание мероприятия'}
                             </span>
 
                             <h3>{event.title}</h3>
@@ -379,6 +416,50 @@ function Admin() {
                       ))}
                     </div>
                   )}
+
+                  <section className="admin-published-section">
+                    <div className="admin-section-heading">
+                      <h2>Опубликованные мероприятия</h2>
+                      <span>{publishedEvents.length} мероприятий</span>
+                    </div>
+
+                    {publishedEvents.length === 0 ? (
+                      <div className="admin-empty">
+                        Опубликованных мероприятий пока нет.
+                      </div>
+                    ) : (
+                      <div className="admin-list">
+                        {publishedEvents.map((event) => (
+                          <article
+                            className="admin-item"
+                            key={event._id || event.id}
+                          >
+                            <div className="admin-item-info">
+                              <span className="admin-status">Опубликовано</span>
+                              <h3>{event.title}</h3>
+                              <p>{event.description}</p>
+                              <div className="admin-meta">
+                                <span>Дата: {formatDate(event.startAt)}</span>
+                                <span>
+                                  Участников: {event.registeredCount || 0}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="admin-actions">
+                              <button
+                                type="button"
+                                className="admin-reject"
+                                disabled={submitting}
+                                onClick={() => cancelPublishedEvent(event)}
+                              >
+                                Отменить одобрение
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </section>
                 </>
               ) : (
                 <div className="admin-request-details">
@@ -397,6 +478,7 @@ function Admin() {
                       </span>
 
                       <h2>{selectedEvent.title}</h2>
+                      <p><strong>{selectedEvent.requestType === 'update' ? 'Обновить данные существующего мероприятия' : 'Создание мероприятия'}</strong></p>
 
                       <p>
                         Проверь все сведения перед
@@ -491,12 +573,7 @@ function Admin() {
                       </Detail>
                     </div>
 
-                    <p className="admin-schedule-note">
-                      Перед публикацией сервер проверяет,
-                      не занято ли помещение другим
-                      опубликованным мероприятием
-                      в выбранное время.
-                    </p>
+
                   </section>
 
                   <section className="admin-detail-section">
@@ -551,7 +628,7 @@ function Admin() {
                         >
                           {submitting
                             ? 'Обработка...'
-                            : 'Одобрить заявку'}
+                            : selectedEvent.requestType === 'update' ? 'Одобрить обновление' : 'Одобрить заявку'}
                         </button>
 
                         <button

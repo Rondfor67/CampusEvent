@@ -148,6 +148,12 @@ function App() {
             }
           />
 
+          <Route path="/events/edit/:applicationId" element={
+            <ProtectedRoute allowedRoles={['user', 'teacher']}>
+              <CreateEvent />
+            </ProtectedRoute>
+          } />
+
           {/* Билеты студентов и преподавателей */}
           <Route
             path="/tickets"

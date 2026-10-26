@@ -2,6 +2,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 
 import User from '../models/User.js';
 import AllowedStudent from '../models/AllowedStudent.js';
@@ -9,6 +10,30 @@ import AllowedTeacher from '../models/AllowedTeacher.js';
 
 const router = express.Router();
 
+//Защита от брутфорса при входе
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: {
+    message: 'Слишком много попыток входа. Попробуйте через 15 минут.',
+  },
+});
+
+//Защита от массовой регистрации
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: {
+    message: 'Слишком много попыток регистрации. Попробуйте позже.',
+  },
+});
+
+//Проверка корректности ИИН
 function isValidIin(iin) {
   if (!/^\d{12}$/.test(iin)) {
     return false;
@@ -37,6 +62,7 @@ function isValidIin(iin) {
   );
 }
 
+//Проверка возраста студента
 function isAllowedStudentIin(iin) {
   if (!isValidIin(iin)) {
     return false;
@@ -52,6 +78,7 @@ function isAllowedStudentIin(iin) {
   );
 }
 
+//Нормализация номера телефона
 function normalizePhone(phone) {
   if (typeof phone !== 'string') return null;
 
@@ -72,6 +99,7 @@ function normalizePhone(phone) {
   return null;
 }
 
+//Создание JWT-токена
 function createToken(user) {
   const secret = process.env.JWT_SECRET;
 
@@ -89,8 +117,8 @@ function createToken(user) {
   );
 }
 
-// РЕГИСТРАЦИЯ
-router.post('/register', async (req, res) => {
+//РЕГИСТРАЦИЯ
+router.post('/register', registerLimiter, async (req, res) => {
   try {
     const {
       iin,
@@ -113,7 +141,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Администратора через регистрацию создать нельзя
+    //Администратора через регистрацию создать нельзя
     if (!['user', 'teacher'].includes(role)) {
       return res.status(403).json({
         message: 'Недопустимая роль пользователя',
@@ -143,7 +171,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Проверяем разрешённый список по роли
+    //Проверяем разрешённый список по роли
     const allowedPerson =
       role === 'teacher'
         ? await AllowedTeacher.findOne({ iin: cleanIin })
@@ -218,8 +246,8 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// ВХОД
-router.post('/login', async (req, res) => {
+//вход
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
 
